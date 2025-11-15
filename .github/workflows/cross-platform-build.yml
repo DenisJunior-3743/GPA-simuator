@@ -91,8 +91,14 @@ jobs:
           pip install pyinstaller
       
       - name: Build Windows EXE
+        shell: powershell
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-windows"
+          # Use the .spec file if present; avoid makespec flags when a .spec exists
+          if (Test-Path 'gpa_simulator.spec') {
+            pyinstaller gpa_simulator.spec --distpath "./dist-windows"
+          } else {
+            pyinstaller --distpath "./dist-windows" --windowed main.py
+          }
       
       - name: Package Windows
         run: |
@@ -140,7 +146,12 @@ jobs:
       
       - name: Build Linux executable
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-linux" --onedir
+          # Use the .spec file if present; avoid makespec flags when a .spec exists
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec --distpath "./dist-linux"
+          else
+            pyinstaller --distpath "./dist-linux" --onedir main.py
+          fi
       
       - name: Download linuxdeploy
         run: |
@@ -192,7 +203,12 @@ jobs:
       
       - name: Build macOS app
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-macos" --windowed
+          # Use the .spec file if present; avoid makespec flags when a .spec exists
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec --distpath "./dist-macos"
+          else
+            pyinstaller --distpath "./dist-macos" --windowed main.py
+          fi
       
       - name: Create DMG
         run: |
