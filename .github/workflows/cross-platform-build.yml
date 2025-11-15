@@ -16,7 +16,6 @@ jobs:
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
     outputs:
       tag_name: ${{ steps.tag.outputs.next }}
-    
     steps:
       - name: Checkout repo (full)
         uses: actions/checkout@v4
@@ -72,7 +71,6 @@ jobs:
     needs: [bump-tag]
     runs-on: windows-latest
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
-
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -123,7 +121,6 @@ jobs:
     needs: [bump-tag]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
-
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -186,7 +183,6 @@ jobs:
     needs: [bump-tag]
     runs-on: macos-latest
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
-
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -227,7 +223,6 @@ jobs:
     needs: [bump-tag]
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
-
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
@@ -266,7 +261,6 @@ jobs:
     needs: [bump-tag, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
     if: ${{ startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
-
     steps:
       - name: Checkout tag
         uses: actions/checkout@v4
