@@ -1,0 +1,124 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main, master, Denis, build ]
+  workflow_dispatch:
+
+jobs:
+  bump-tag:
+    name: Bump and create tag
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.set-tag.outputs.new_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compute next tag
+        id: set-tag
+        run: |
+          git fetch --tags origin || true
+          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$latest" ]; then
+            new_tag="v1.0"
+          else
+            t=${latest#v}
+            IFS='.' read -r -a parts <<< "$t"
+            if [ ${#parts[@]} -eq 1 ]; then
+              major=${parts[0]}
+              new_tag="v${major}.1"
+            elif [ ${#parts[@]} -eq 2 ]; then
+              major=${parts[0]}
+              minor=${parts[1]}
+              minor=$((minor + 1))
+              new_tag="v${major}.${minor}"
+            else
+              major=${parts[0]}
+              minor=${parts[1]}
+              patch=${parts[2]}
+              patch=$((patch + 1))
+              new_tag="v${major}.${minor}.${patch}"
+            fi
+          fi
+          echo "New tag: $new_tag"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$new_tag"
+          git push origin "$new_tag"
+          echo "::set-output name=new_tag::$new_tag"
+  build:
+    name: Build macOS
+    runs-on: macos-latest
+    needs: bump-tag
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python deps
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      - name: Build with PyInstaller
+        run: |
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec
+          else
+            pyinstaller --distpath "./dist-macos" --windowed ui_app.py
+          fi
+      - name: Package DMG
+        continue-on-error: true
+        run: |
+          mkdir -p "dist/GPA Simulator.app/Contents/MacOS"
+          mkdir -p "dist/GPA Simulator.app/Contents/Resources"
+          if [ -f "dist/gpa_simulator" ]; then
+            cp "dist/gpa_simulator" "dist/GPA Simulator.app/Contents/MacOS/"
+          elif [ -d "dist/gpa_simulator" ]; then
+            cp -r "dist/gpa_simulator"/* "dist/GPA Simulator.app/Contents/MacOS/"
+          fi
+          if [ -f "gpa.ico" ]; then cp "gpa.ico" "dist/GPA Simulator.app/Contents/Resources/"; fi
+          brew install create-dmg || true
+          if [ -d "dist/GPA Simulator.app" ]; then
+            create-dmg \
+              --volname "GPA Simulator" \
+              --window-pos 200 120 \
+              --window-size 800 600 \
+              --icon-size 120 \
+              --icon "GPA Simulator.app" 200 190 \
+              gpa-simulator.dmg \
+              "dist/GPA Simulator.app"
+          fi
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gpa-simulator-macos
+          path: gpa-simulator.dmg
+          if-no-files-found: ignore
+  create-release:
+    name: Create Release and attach artifacts
+    needs: [bump-tag, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ needs.bump-tag.outputs.tag }}
+          release_name: ${{ needs.bump-tag.outputs.tag }} - macOS build
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            release-artifacts/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
