@@ -1,0 +1,6 @@
+{
+  "files.exclude": { "**/__pycache__": true },
+  "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
+  "javascript.validate.enable": false,
+  "eslint.enable": false
+}

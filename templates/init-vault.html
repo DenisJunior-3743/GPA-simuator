@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Initialize Vault</h1>
+    <p class="lead">Set up your personal vault to securely store semester records and simulation results.</p>
+    <form>
+      <label>Vault Name</label>
+      <input class="input" placeholder="e.g. My GPA Vault">
+      <label style="margin-top:8px">Vault Password</label>
+      <input class="input" type="password" placeholder="Choose a strong password">
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="alert('Will initialize vault (demo)')">Initialize Vault</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Why use a vault?</strong>
+      <ul>
+        <li>Securely store your semester records</li>
+        <li>Access historical GPA/CGPA data</li>
+        <li>Enable advanced simulation features</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

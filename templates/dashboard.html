@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card">
+    <h1 class="h1">GPA & CGPA Simulator</h1>
+    <details style="margin-bottom:16px;cursor:pointer">
+      <summary style="padding:10px;background:#f0f0f0;border-radius:4px;font-weight:600;user-select:none">📋 Info & Instructions (click to expand)</summary>
+      <div style="margin-top:10px;padding:12px;background:#fafafa;border-left:4px solid #2196F3;border-radius:4px">
+        <div style="margin-bottom:10px">
+          <strong>Guest mode:</strong> You can use all features, but your data will not be saved unless you log in.<br>
+          <span style="color:var(--primary)">Advantages of logging in:</span> Save your academic history, auto-fill CGPA, and access vault features.
+        </div>
+        <div>
+          <strong>Instructions:</strong> Please check your curriculum for accurate Credit Unit (CU) information.<br>
+          Incorrect CU values will lead to incorrect GPA/CGPA calculations.
+        </div>
+      </div>
+    </details>
+    <div class="option-grid">
+      <div class="option-tile">
+        <h3>1. Quick GPA</h3>
+        <p>Calculate current semester GPA</p>
+        <a class="cta" href="/option1" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>2. Simulate CGPA</h3>
+        <p>You can predict your CGPA score by providing your probable GPA score</p>
+        <a class="cta" href="/option2" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>3. Calculate cummulative CGPA (All Semesters)</h3>
+        <p>Load saved semesters or enter manually</p>
+        <a class="cta" href="/option3" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>4. Required GPA</h3>
+        <p>What GPA do I need next to score a given CGPA?</p>
+        <a class="cta" href="/option4" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>5. Simulate grade combinations</h3>
+        <p>Find possible grades for target GPA</p>
+        <a class="cta" href="/option5" tabindex="0">Open</a>
+      </div>
+      {% if user %}
+      <div class="option-tile">
+        <h3>6. View academic history</h3>
+        <p>See all saved semesters and grades</p>
+        <a class="cta" href="/history" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>7. Save current semester to vault</h3>
+        <p>Store your current semester data</p>
+        <a class="cta" href="/save-semester" tabindex="0">Open</a>
+      </div>
+      <div class="option-tile">
+        <h3>8. Initialize vault database</h3>
+        <p>Set up or reset your vault database</p>
+        <a class="cta" href="/init-vault" tabindex="0">Open</a>
+      </div>
+      {% else %}
+      <div class="option-tile" style="opacity:0.6">
+        <h3>6. View academic history</h3>
+        <p style="font-size:0.9em;color:#999">Available after login</p>
+        <button class="cta" disabled style="cursor:not-allowed">Login to use</button>
+      </div>
+      <div class="option-tile" style="opacity:0.6">
+        <h3>7. Save current semester to vault</h3>
+        <p style="font-size:0.9em;color:#999">Available after login</p>
+        <button class="cta" disabled style="cursor:not-allowed">Login to use</button>
+      </div>
+      <div class="option-tile" style="opacity:0.6">
+        <h3>8. Initialize vault database</h3>
+        <p style="font-size:0.9em;color:#999">Available after login</p>
+        <button class="cta" disabled style="cursor:not-allowed">Login to use</button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

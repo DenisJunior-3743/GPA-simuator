@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Option 8: Smart Defaults</h1>
+    <p class="lead">Apply smart default values for GPA/CGPA calculations based on your academic history and common patterns.</p>
+    <form>
+      <label>Apply Smart Defaults?</label>
+      <select class="input">
+        <option value="yes">Yes</option>
+        <option value="no">No</option>
+      </select>
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="alert('Will apply smart defaults (demo)')">Apply</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Smart Defaults Guidance:</strong>
+      <ul>
+        <li>Defaults are based on your previous semesters</li>
+        <li>Helps speed up GPA/CGPA calculations</li>
+        <li>Can be customized later</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

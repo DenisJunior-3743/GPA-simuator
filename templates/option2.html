@@ -1,0 +1,500 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:820px;margin:24px auto;padding:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <h1 class="h1" style="margin:0">Simulate CGPA</h1>
+    </div>
+
+  <div id="flow-container" data-user-logged-in="{{ 1 if session.user_id else 0 }}">
+      <!-- STEP 1: Old CGPA -->
+      <div id="step1" class="flow-step" style="display:block;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px;color:#00A859;font-weight:bold">STEP 1</span>
+          <h2 style="margin:0;font-size:18px">Your old CGPA (before current semester)</h2>
+        </div>
+        <div id="step1-instruction" style="color:#666;font-size:14px;margin-bottom:12px;display:none">
+          Enter your cumulative GPA from before the current semester you want to simulate.
+        </div>
+        <div>
+          <label>Old CGPA</label>
+          <input class="input" id="old-cgpa" type="number" step="0.01" min="0" max="5.0" placeholder="e.g. 3.80">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;justify-content:space-between">
+          <button class="btn link" type="button" id="btn-step1-prev" style="display:none" aria-label="Previous step">← Previous</button>
+          <button class="cta" type="button" id="btn-step1-next">Next: Old CU →</button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Old Total CU (with choice) -->
+      <div id="step2" class="flow-step" style="display:none;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px;color:#00A859;font-weight:bold">STEP 2</span>
+          <h2 style="margin:0;font-size:18px">Your total CU earned so far</h2>
+        </div>
+        <div id="step2-instruction" style="color:#666;font-size:14px;margin-bottom:12px;display:none">
+          Enter how many credit units you've completed before the current semester. You can enter the total directly or add them up semester by semester.
+        </div>
+
+        <!-- Vault/Manual choice for logged-in users -->
+        <div id="step2-vault-choice" style="display:none;margin-bottom:12px;padding:8px;background:#f0f0f0;border-radius:4px">
+          <label style="margin-bottom:8px;display:block;font-weight:bold">Where should we get your old CU?</label>
+          <div style="display:flex;gap:12px">
+            <button class="btn" type="button" id="btn-vault-choice" style="flex:1">Use vault defaults</button>
+            <button class="btn" type="button" id="btn-manual-choice" style="flex:1">Enter manually</button>
+          </div>
+        </div>
+
+        <div id="step2-manual-section" style="display:block">
+          <label style="margin-bottom:8px;display:block;font-weight:bold">How would you like to enter CU?</label>
+          <div style="display:flex;gap:12px;margin-bottom:12px">
+            <button class="btn" type="button" id="btn-cu-total" style="flex:1">Total CU (direct)</button>
+            <button class="btn" type="button" id="btn-cu-persem" style="flex:1">Per-semester breakdown</button>
+          </div>
+
+          <!-- Total CU Direct Entry -->
+          <div id="section-cu-total" style="display:block;margin-bottom:12px">
+            <label>Old total CU</label>
+            <input class="input" id="old-cu" type="number" min="0" placeholder="e.g. 45">
+          </div>
+
+          <!-- Per-Semester CU Entry (choose academic year & semester instead of raw count) -->
+          <div id="section-cu-persem" style="display:none;margin-bottom:12px">
+            <label>Academic year and current semester</label>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+              <div style="display:flex;flex-direction:column">
+                <label style="font-size:12px;margin-bottom:4px">Current academic year</label>
+                <select class="input" id="acad-year" style="width:120px">
+                  <option value="1">Year 1</option>
+                  <option value="2">Year 2</option>
+                  <option value="3">Year 3</option>
+                  <option value="4">Year 4</option>
+                  <option value="5">Year 5</option>
+                </select>
+              </div>
+              <div style="display:flex;flex-direction:column">
+                <label style="font-size:12px;margin-bottom:4px">Semester</label>
+                <select class="input" id="acad-sem" style="width:100px">
+                  <option value="1">Sem 1</option>
+                  <option value="2">Sem 2</option>
+                </select>
+              </div>
+              <div style="margin-left:6px">
+                <button class="btn" type="button" id="btn-gen-semesters" style="margin-top:18px">Generate semester inputs</button>
+              </div>
+            </div>
+
+            <!-- Toggle between per-semester total or per-course -->
+            <div id="sem-entry-choice" style="display:none;margin-top:12px;padding:8px;background:#f9f9f9;border-radius:4px">
+              <label style="margin-bottom:8px;display:block;font-size:13px;color:#666">For each semester, enter:</label>
+              <div style="display:flex;gap:10px">
+                <button class="btn" type="button" id="btn-sem-total" style="flex:1;font-size:13px">Total CU per semester</button>
+                <button class="btn" type="button" id="btn-sem-courses" style="flex:1;font-size:13px">Per-course CU</button>
+              </div>
+            </div>
+
+            <div id="completed-list" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </div>
+
+        <!-- Vault Auto-fill Section (shown when logged-in and vault choice selected) -->
+        <div id="section-vault-autofill" style="display:none;margin-bottom:12px;padding:8px;background:#e8f5e9;border-radius:4px">
+          <div class="muted" style="margin-bottom:8px">Fetching vault data...</div>
+          <label>Vault: Old total CU</label>
+          <input class="input green" id="vault-old-cu" readonly>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:8px;justify-content:space-between">
+          <button class="btn link" type="button" id="btn-step2-prev" aria-label="Previous step">← Previous</button>
+          <button class="cta" type="button" id="btn-step2-next">Next: New GPA →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: New GPA -->
+      <div id="step3" class="flow-step" style="display:none;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px;color:#00A859;font-weight:bold">STEP 3</span>
+          <h2 style="margin:0;font-size:18px">Your new semester GPA</h2>
+        </div>
+        <div id="step3-instruction" style="color:#666;font-size:14px;margin-bottom:12px;display:none">
+          Enter the GPA you achieved in the current semester.
+        </div>
+        <div>
+          <label>Current semester GPA</label>
+          <input class="input" id="new-gpa" type="number" step="0.01" min="0" max="5.0" placeholder="e.g. 4.50">
+        </div>
+        <div style="display:flex;gap:10px;margin-top:8px;justify-content:space-between">
+          <button class="btn link" type="button" id="btn-step3-prev" aria-label="Previous step">← Previous</button>
+          <button class="cta" type="button" id="btn-step3-next">Next: New CU →</button>
+        </div>
+      </div>
+
+      <!-- STEP 4: New Total CU (with choice) -->
+      <div id="step4" class="flow-step" style="display:none;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:14px;color:#00A859;font-weight:bold">STEP 4</span>
+          <h2 style="margin:0;font-size:18px">CU for the current semester</h2>
+        </div>
+        <div id="step4-instruction" style="color:#666;font-size:14px;margin-bottom:12px;display:none">
+          Tell us how many credit units you earned in the current semester. You can enter the total directly or list each course's CU.
+        </div>
+
+        <label style="margin-bottom:8px;display:block;font-weight:bold">How would you like to enter new CU?</label>
+        <div style="display:flex;gap:12px;margin-bottom:12px">
+          <button class="btn" type="button" id="btn-new-cu-total" style="flex:1">Total CU (direct)</button>
+          <button class="btn" type="button" id="btn-new-cu-courses" style="flex:1">Per-course breakdown</button>
+        </div>
+
+        <!-- Total CU Direct Entry -->
+        <div id="section-new-cu-total" style="display:block;margin-bottom:12px">
+          <label>Current semester total CU</label>
+          <input class="input" id="new-cu" type="number" min="1" placeholder="e.g. 24">
+        </div>
+
+        <!-- Per-Course CU Entry -->
+        <div id="section-new-cu-courses" style="display:none;margin-bottom:12px">
+          <label>Number of courses in current semester</label>
+          <input class="input" id="num-courses" type="number" min="1" max="20" placeholder="e.g. 6">
+          <button class="btn" type="button" id="btn-gen-courses" style="margin-top:8px">Generate course inputs</button>
+          <div id="courses-list" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:12px;justify-content:space-between;align-items:center">
+          <button class="btn link" type="button" id="btn-step4-prev" aria-label="Previous step">← Previous</button>
+          <div style="display:flex;gap:10px;flex:1;justify-content:flex-end">
+            <button class="cta" type="submit" id="btn-calculate">Calculate CGPA</button>
+            <button class="btn link" type="button" id="btn-clear">Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Panel -->
+    <div id="result-panel" style="display:none;margin-top:16px;">
+      <div id="result-box" class="result-box">
+        <div>
+          <strong id="result-title">New CGPA:</strong>
+          <span id="result-value" class="result-value" style="margin-left:8px"></span>
+        </div>
+        <div id="spinner" class="spinner" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Read login status from data attribute (set by Jinja2 server-side)
+    const userIsLoggedIn = document.getElementById('flow-container').dataset.userLoggedIn === '1';
+    let currentStep = 1;
+    let cuSource = 'direct'; // 'direct' or 'per_semester' for old CU; 'vault' if logged in
+    let newCuSource = 'direct'; // 'direct' or 'per_course' for new CU
+    let oldCuValue = 0;
+
+    function showStep(n){
+      document.querySelectorAll('.flow-step').forEach(el => el.style.display = 'none');
+      document.getElementById(`step${n}`).style.display = 'block';
+      currentStep = n;
+      // Show instructions when step is revealed
+      const instr = document.getElementById(`step${n}-instruction`);
+      if (instr) instr.style.display = 'block';
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function updateStepButtons(){
+      // Hide all previous/next buttons first
+      document.querySelectorAll('[id^="btn-step"][id$="-prev"]').forEach(btn => btn.style.display = 'none');
+      document.querySelectorAll('[id^="btn-step"][id$="-next"]').forEach(btn => btn.style.display = 'inline-block');
+      // Show previous button for steps 2, 3, 4 (not step 1)
+      if (currentStep > 1) {
+        const prevBtn = document.getElementById(`btn-step${currentStep}-prev`);
+        if (prevBtn) prevBtn.style.display = 'inline-block';
+      }
+      // Hide next button for last step (step 4)
+      if (currentStep === 4) {
+        const nextBtn = document.getElementById(`btn-step${currentStep}-next`);
+        if (nextBtn) nextBtn.style.display = 'none';
+      }
+    }
+
+    // STEP 1: Old CGPA
+    document.getElementById('btn-step1-next').addEventListener('click', () => {
+      const oldCgpa = parseFloat(document.getElementById('old-cgpa').value || '0');
+      if (!oldCgpa || oldCgpa < 0 || oldCgpa > 5) {
+        alert('Enter valid old CGPA (0.0 - 5.0)');
+        return;
+      }
+      showStep(2);
+      updateStepButtons();
+    });
+
+    // STEP 2: Old CU
+    // For logged-in users, show vault/manual choice
+    if (userIsLoggedIn) {
+      document.getElementById('step2-vault-choice').style.display = 'block';
+      document.getElementById('btn-vault-choice').addEventListener('click', () => {
+        cuSource = 'vault';
+        document.getElementById('step2-manual-section').style.display = 'none';
+        document.getElementById('section-vault-autofill').style.display = 'block';
+        fetchVaultOldCu();
+      });
+      document.getElementById('btn-manual-choice').addEventListener('click', () => {
+        cuSource = 'manual';
+        document.getElementById('step2-manual-section').style.display = 'block';
+        document.getElementById('section-vault-autofill').style.display = 'none';
+      });
+    }
+
+    // Per-semester vs direct CU entry choice
+    document.getElementById('btn-cu-total').addEventListener('click', () => {
+      document.getElementById('section-cu-total').style.display = 'block';
+      document.getElementById('section-cu-persem').style.display = 'none';
+      document.getElementById('completed-list').innerHTML = '';
+      cuSource = 'direct';
+    });
+
+    document.getElementById('btn-cu-persem').addEventListener('click', () => {
+      document.getElementById('section-cu-total').style.display = 'none';
+      document.getElementById('section-cu-persem').style.display = 'block';
+      cuSource = 'per_semester';
+    });
+
+    document.getElementById('btn-gen-semesters').addEventListener('click', () => {
+      const n = computeSemesterCount();
+      const list = document.getElementById('completed-list');
+      list.innerHTML = '';
+      if (!n || n < 1) { alert('Select a valid academic year and semester'); return; }
+      // Show the choice selector
+      document.getElementById('sem-entry-choice').style.display = 'block';
+      // Default to total CU per semester
+      generateSemesterInputs(n, 'total');
+    });
+
+    function fetchVaultOldCu() {
+      fetch('/api/vault_defaults').then(r => r.json()).then(j => {
+        if (j.error) {
+          document.querySelector('#section-vault-autofill .muted').textContent = 'No vault data available.';
+        } else {
+          document.getElementById('vault-old-cu').value = j.old_cu || '';
+          oldCuValue = j.old_cu || 0;
+        }
+      }).catch(() => {
+        document.querySelector('#section-vault-autofill .muted').textContent = 'Unable to fetch vault data.';
+      });
+    }
+
+    // Compute semester count from academic year and semester selectors
+    function computeSemesterCount() {
+      const year = parseInt(document.getElementById('acad-year').value || '0', 10);
+      const sem = parseInt(document.getElementById('acad-sem').value || '0', 10);
+      if (!year || year < 1) return 0;
+      if (!sem || (sem !== 1 && sem !== 2)) return 0;
+      return (year - 1) * 2 + sem;
+    }
+
+    // Generate semester inputs with choice of total or per-course
+    function generateSemesterInputs(n, mode) {
+      const list = document.getElementById('completed-list');
+      list.innerHTML = '';
+      if (mode === 'total') {
+        for (let i = 1; i <= n; i++) {
+          const year = Math.floor((i - 1) / 2) + 1;
+          const sem = ((i - 1) % 2) + 1;
+          const div = document.createElement('div');
+          div.style.display = 'flex'; div.style.gap = '8px';
+          div.innerHTML = `<label style='width:220px'>Year ${year} Semester ${sem} total CU</label><input class='input' name='sem_cu_${i}' type='number' min='0' value='0'>`;
+          list.appendChild(div);
+        }
+      } else if (mode === 'courses') {
+        for (let i = 1; i <= n; i++) {
+          const year = Math.floor((i - 1) / 2) + 1;
+          const sem = ((i - 1) % 2) + 1;
+          const div = document.createElement('div');
+          div.style.border = '1px solid #ddd'; div.style.padding = '8px'; div.style.borderRadius = '4px'; div.style.marginBottom = '8px';
+          div.innerHTML = `
+            <div style='display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:bold;color:#00A859'>
+              <span>Year ${year} Semester ${sem}</span>
+              <input class='input' type='number' placeholder='# courses' min='1' max='20' style='width:100px;font-size:12px' data-sem='${i}' data-role='num-courses'>
+              <button class='btn' type='button' style='padding:4px 8px;font-size:12px' onclick='generateSemesterCourses(${i})'>Add courses</button>
+            </div>
+            <div id='sem-${i}-courses' style='display:flex;flex-direction:column;gap:6px'></div>
+          `;
+          list.appendChild(div);
+        }
+      }
+    }
+
+    // Generate course inputs for a specific semester
+    function generateSemesterCourses(semNum) {
+      const numCoursesInput = document.querySelector(`[data-sem='${semNum}'][data-role='num-courses']`);
+      const n = parseInt(numCoursesInput.value || 0, 10);
+      const courseList = document.getElementById(`sem-${semNum}-courses`);
+      courseList.innerHTML = '';
+      if (!n || n < 1) { alert('Enter number of courses for this semester'); return; }
+      for (let i = 1; i <= n; i++) {
+        const div = document.createElement('div');
+        div.style.display = 'flex'; div.style.gap = '8px'; div.style.paddingLeft = '8px';
+        div.innerHTML = `<label style='width:140px;font-size:12px'>Course ${i} CU</label><select class='input' name='sem_${semNum}_course_${i}' style='font-size:12px' required><option value='1'>1</option><option value='2'>2</option><option value='3' selected>3</option><option value='4'>4</option><option value='5'>5</option></select>`;
+        courseList.appendChild(div);
+      }
+    }
+
+    // Button handlers for per-semester entry mode choice
+    document.getElementById('btn-sem-total').addEventListener('click', () => {
+      const n = computeSemesterCount();
+      if (!n || n < 1) { alert('Select a valid academic year and semester'); return; }
+      generateSemesterInputs(n, 'total');
+    });
+
+    document.getElementById('btn-sem-courses').addEventListener('click', () => {
+      const n = computeSemesterCount();
+      if (!n || n < 1) { alert('Select a valid academic year and semester'); return; }
+      generateSemesterInputs(n, 'courses');
+    });
+    document.getElementById('btn-step2-next').addEventListener('click', () => {
+      if (cuSource === 'vault') {
+        const vcu = parseFloat(document.getElementById('vault-old-cu').value || '0');
+        if (!vcu || vcu < 0) { alert('Vault CU not available or invalid'); return; }
+        oldCuValue = vcu;
+      } else if (cuSource === 'direct') {
+        const cu = parseInt(document.getElementById('old-cu').value || '0', 10);
+        if (!cu || cu < 0) { alert('Enter valid old CU'); return; }
+        oldCuValue = cu;
+      } else if (cuSource === 'per_semester') {
+        let sum = 0;
+        const inputs = document.querySelectorAll('#completed-list input');
+        if (!inputs || inputs.length === 0) { alert('Click "Generate semester inputs" first'); return; }
+        inputs.forEach(inp => { sum += parseInt(inp.value || 0, 10); });
+        if (!sum || sum < 0) { alert('Enter valid semester CU values'); return; }
+        oldCuValue = sum;
+      }
+      // For per_semester mode, sum all inputs (both direct CU and course CU dropdowns)
+      if (cuSource === 'per_semester') {
+        let sum = 0;
+        // Sum direct CU inputs (for 'total' mode)
+        const directInputs = document.querySelectorAll('#completed-list input[type="number"]');
+        directInputs.forEach(inp => { sum += parseInt(inp.value || 0, 10); });
+        // Sum course CU dropdowns (for 'courses' mode)
+        const courseSelects = document.querySelectorAll('#completed-list select');
+        courseSelects.forEach(sel => { sum += parseInt(sel.value || 0, 10); });
+        if (!sum || sum < 0) { alert('Enter valid semester CU values'); return; }
+        oldCuValue = sum;
+      }
+      showStep(3);
+      updateStepButtons();
+    });
+
+    // STEP 3: New GPA
+    document.getElementById('btn-step3-next').addEventListener('click', () => {
+      const newGpa = parseFloat(document.getElementById('new-gpa').value || '0');
+      if (!newGpa || newGpa < 0 || newGpa > 5) {
+        alert('Enter valid new GPA (0.0 - 5.0)');
+        return;
+      }
+      showStep(4);
+      updateStepButtons();
+    });
+
+    // STEP 4: New CU
+    document.getElementById('btn-new-cu-total').addEventListener('click', () => {
+      document.getElementById('section-new-cu-total').style.display = 'block';
+      document.getElementById('section-new-cu-courses').style.display = 'none';
+      document.getElementById('courses-list').innerHTML = '';
+      newCuSource = 'direct';
+    });
+
+    document.getElementById('btn-new-cu-courses').addEventListener('click', () => {
+      document.getElementById('section-new-cu-total').style.display = 'none';
+      document.getElementById('section-new-cu-courses').style.display = 'block';
+      newCuSource = 'per_course';
+    });
+
+    document.getElementById('btn-gen-courses').addEventListener('click', () => {
+      const n = parseInt(document.getElementById('num-courses').value || 0, 10);
+      const list = document.getElementById('courses-list');
+      list.innerHTML = '';
+      if (!n || n < 1) { alert('Enter number of courses'); return; }
+      for (let i = 1; i <= n; i++) {
+        const div = document.createElement('div');
+        div.style.display = 'flex'; div.style.gap = '8px';
+        div.innerHTML = `<label style='width:160px'>Course ${i} CU</label><select class='input' name='course_cu_${i}' required><option value='1'>1</option><option value='2'>2</option><option value='3' selected>3</option><option value='4'>4</option><option value='5'>5</option></select>`;
+        list.appendChild(div);
+      }
+    });
+
+    // Calculate CGPA
+    document.getElementById('btn-calculate').addEventListener('click', (e) => {
+      e.preventDefault();
+      const oldCgpa = parseFloat(document.getElementById('old-cgpa').value || '0');
+      const newGpa = parseFloat(document.getElementById('new-gpa').value || '0');
+      let newCu = 0;
+
+      if (newCuSource === 'direct') {
+        newCu = parseInt(document.getElementById('new-cu').value || '0', 10);
+        if (!newCu || newCu < 1) { alert('Enter valid new CU'); return; }
+      } else if (newCuSource === 'per_course') {
+        const selects = document.querySelectorAll('#courses-list select');
+        if (!selects || selects.length === 0) { alert('Click "Generate course inputs" first'); return; }
+        selects.forEach(sel => { newCu += parseInt(sel.value || 0, 10); });
+        if (!newCu || newCu < 1) { alert('Enter valid course CU values'); return; }
+      }
+
+      // Show spinner
+      document.getElementById('result-panel').style.display = 'block';
+      document.getElementById('result-value').textContent = 'Calculating...';
+      document.getElementById('spinner').style.display = 'block';
+
+      const fd = new FormData();
+      fd.append('old_cgpa', oldCgpa);
+      fd.append('old_cu', oldCuValue);
+      fd.append('new_gpa', newGpa);
+      fd.append('new_cu', newCu);
+
+      fetch('/api/option2', { method: 'POST', body: fd })
+        .then(r => r.json().then(b => ({ ok: r.ok, body: b })))
+        .then(resp => {
+          document.getElementById('spinner').style.display = 'none';
+          if (!resp.ok) {
+            document.getElementById('result-box').classList.add('error');
+            document.getElementById('result-title').textContent = 'Error:';
+            document.getElementById('result-value').textContent = resp.body.error || 'Unknown error';
+            return;
+          }
+          document.getElementById('result-box').classList.remove('error');
+          document.getElementById('result-title').textContent = 'New CGPA:';
+          document.getElementById('result-value').textContent = resp.body.new_cgpa;
+        })
+        .catch(err => {
+          document.getElementById('spinner').style.display = 'none';
+          document.getElementById('result-box').classList.add('error');
+          document.getElementById('result-title').textContent = 'Error:';
+          document.getElementById('result-value').textContent = err.message;
+        });
+    });
+
+    // Clear button
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      document.querySelectorAll('input').forEach(el => el.value = '');
+      document.getElementById('completed-list').innerHTML = '';
+      document.getElementById('courses-list').innerHTML = '';
+      document.getElementById('result-panel').style.display = 'none';
+      cuSource = 'direct';
+      newCuSource = 'direct';
+      oldCuValue = 0;
+      showStep(1);
+    });
+
+    // Previous button handlers
+    [2, 3, 4].forEach(step => {
+      const btn = document.getElementById(`btn-step${step}-prev`);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          showStep(step - 1);
+          updateStepButtons();
+        });
+      }
+    });
+
+    // Initialize
+    showStep(1);
+    updateStepButtons();
+  </script>
+  {# Footer home link provided by base layout include; removed local duplicate #}
+{% endblock %}

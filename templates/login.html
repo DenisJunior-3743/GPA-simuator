@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:480px; margin: 24px auto;">
+    <h1 class="h1">Login</h1>
+    {% if error %}
+      <div class="alert">{{ error }}</div>
+    {% endif %}
+    <div id="login-panel">
+      <form method="post" id="login-form">
+        <div class="form-row">
+          <label>Username</label>
+          <input name="username" class="input" placeholder="Enter username" required>
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <div class="input-with-toggle">
+            <input id="login-password" name="password" class="input" placeholder="Enter password" type="password" required>
+            <button type="button" id="login-toggle" aria-label="Toggle password visibility">👁️</button>
+          </div>
+        </div>
+        <div class="form-row" style="display:flex;gap:8px;align-items:center">
+          <button class="cta" type="submit">Login</button>
+          <a class="btn link" href="/">Cancel</a>
+          <button type="button" class="btn" id="show-register">Register</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="register-panel" style="display:none">
+      <form method="post" action="/register" id="register-form">
+        <div class="form-row">
+          <label>Username</label>
+          <input name="username" class="input" placeholder="Choose a username" required>
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <div class="input-with-toggle" style="display:flex;align-items:center">
+            <input id="reg-password" name="password" type="password" class="input" placeholder="Choose a password" required>
+            <button type="button" id="toggle-password" class="btn link" aria-label="Toggle password visibility">Show</button>
+          </div>
+        </div>
+        <div id="password-error" style="color:#c00;font-size:13px;display:none;margin-top:6px">Password must be at least 6 characters.</div>
+        <label>Full name (optional)</label>
+        <input name="full_name" class="input" placeholder="Full name">
+        <label>Email (optional)</label>
+        <input name="email" class="input" placeholder="you@example.com">
+        <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+          <button class="cta" type="submit">Register</button>
+          <button type="button" class="btn" id="cancel-register">Back to login</button>
+        </div>
+      </form>
+      <script>
+        // Password visibility toggle and basic validation for register form
+        const pwd = document.getElementById('reg-password');
+        const toggle = document.getElementById('toggle-password');
+        const pwErr = document.getElementById('password-error');
+        toggle.addEventListener('click', () => {
+          if (pwd.type === 'password') { pwd.type = 'text'; toggle.textContent = 'Hide'; }
+          else { pwd.type = 'password'; toggle.textContent = 'Show'; }
+        });
+        document.getElementById('register-form').addEventListener('submit', (e) => {
+          const v = pwd.value || '';
+          if (v.length < 6) {
+            e.preventDefault();
+            pwErr.style.display = 'block';
+            pwd.style.borderColor = '#c00';
+            pwd.focus();
+            return false;
+          }
+          // pass through
+          pwErr.style.display = 'none';
+          pwd.style.borderColor = '';
+          return true;
+        });
+      </script>
+    </div>
+    <script>
+      document.getElementById('show-register').addEventListener('click', () => {
+        document.getElementById('login-panel').style.display = 'none';
+        document.getElementById('register-panel').style.display = 'block';
+      });
+      document.getElementById('cancel-register').addEventListener('click', () => {
+        document.getElementById('register-panel').style.display = 'none';
+        document.getElementById('login-panel').style.display = 'block';
+      });
+      // Login password visibility toggle
+      const lpwd = document.getElementById('login-password');
+      const ltoggle = document.getElementById('login-toggle');
+      if (ltoggle && lpwd) {
+        ltoggle.addEventListener('click', () => {
+          if (lpwd.type === 'password') { lpwd.type = 'text'; ltoggle.textContent = '🙈'; }
+          else { lpwd.type = 'password'; ltoggle.textContent = '👁️'; }
+        });
+      }
+    </script>
+  </div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:540px;margin:24px auto;padding:20px">
+    <h1 class="h1">Create account</h1>
+    <p class="lead">Register an account to save your academic history locally. This app stores data in your machine only.</p>
+    {% if error %}
+      <div class="alert">{{ error }}</div>
+    {% endif %}
+    <form method="post">
+      <label>Full name</label>
+      <input name="full_name" class="input green" placeholder="Your full name">
+      <label style="margin-top:8px">Username</label>
+      <input name="username" class="input green" placeholder="Choose a username">
+      <div style="margin-top:12px">
+        <button class="cta" type="submit">Create account</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
