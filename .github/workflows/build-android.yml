@@ -5,6 +5,10 @@ on:
     branches: [ main, master, Denis, build ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   bump-tag:
     name: Bump and create tag
