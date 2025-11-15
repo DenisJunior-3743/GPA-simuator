@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """
 Test save-semester flow end-to-end
+Requires Flask server running on localhost:5000
 """
+import pytest
 import requests
 import json
 import time
 
 BASE_URL = 'http://127.0.0.1:5000'
 
+@pytest.mark.integration
 def test_save_semester_flow():
     print("Testing save-semester flow...\n")
     
