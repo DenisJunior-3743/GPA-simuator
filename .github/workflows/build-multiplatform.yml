@@ -29,23 +29,14 @@ jobs:
           pip install pyinstaller
       
       - name: Build executable with PyInstaller
-
         run: |
-          pyinstaller gpa_simulator.spec
-      
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v3
-
-        shell: powershell
-        run: |
-          # Use the .spec file if present; avoid passing makespec flags when a .spec exists
           if (Test-Path 'gpa_simulator.spec') {
             pyinstaller gpa_simulator.spec
           } else {
-            # Fallback: build with explicit options when no spec is provided
             pyinstaller --distpath "./dist" --windowed main.py
           }
-
+        shell: powershell
+      
       - name: Show Windows dist contents
         shell: cmd
         run: |
@@ -59,16 +50,14 @@ jobs:
           if not exist gpa-cgpa-simulator-windows mkdir gpa-cgpa-simulator-windows
           if exist dist\gpa_simulator\run_simulator.bat copy /Y dist\gpa_simulator\run_simulator.bat gpa-cgpa-simulator-windows\
           if exist dist\gpa_simulator\* copy /Y dist\gpa_simulator\* gpa-cgpa-simulator-windows\
-
+      
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
-
         with:
           name: gpa-simulator-windows
           path: dist/gpa_simulator/
           retention-days: 30
- if-no-files-found: ignore
-
+          if-no-files-found: ignore
 
   build-linux:
     name: Build Linux AppImage
@@ -85,12 +74,9 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-
-          sudo apt-get install -y appimage-builder
-
-          # appimage-builder is not always available via apt on runners; install via pip as fallback
+          sudo apt-get install -y appimage-builder || true
           python -m pip install --upgrade pip
-          pip install appimage-builder || tr
+          pip install appimage-builder || true
       
       - name: Install Python dependencies
         run: |
@@ -100,29 +86,12 @@ jobs:
       
       - name: Build executable with PyInstaller
         run: |
-
-          pyinstaller gpa_simulator.spec --onedir
-      
-      - name: Create AppImage
-        run: |
-          mkdir -p appimage/usr/bin
-          cp -r dist/gpa_simulator/* appimage/usr/bin/
-          cd appimage
-          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          chmod +x linuxdeploy-x86_64.AppImage
-          ./linuxdeploy-x86_64.AppImage --appdir=usr/bin -e gpa_simulator -d ../gpa-simulator.desktop -i ../icon.png --create-appimage
-      
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v3
-
-          # Use the .spec file if present; avoid makespec flags when a .spec exists
           if [ -f "gpa_simulator.spec" ]; then
-            pyinstaller gpa_simulator.spec
+            pyinstaller gpa_simulator.spec --onedir
           else
-            # Fallback: build a directory-based distribution
             pyinstaller --distpath "./dist-linux" --onedir main.py
           fi
-
+      
       - name: Show Linux dist contents
         run: |
           echo "Listing dist directory contents:" || true
@@ -141,14 +110,11 @@ jobs:
       
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
-
         with:
           name: gpa-simulator-linux
           path: gpa-simulator*.AppImage
           retention-days: 30
-
           if-no-files-found: ignore
-
 
   build-macos:
     name: Build macOS App Bundle
@@ -170,33 +136,6 @@ jobs:
       
       - name: Build executable with PyInstaller
         run: |
-
-          pyinstaller gpa_simulator.spec
-      
-      - name: Create macOS App Bundle
-        run: |
-          mkdir -p dist/GPA\ Simulator.app/Contents/MacOS
-          mkdir -p dist/GPA\ Simulator.app/Contents/Resources
-          cp dist/gpa_simulator/gpa_simulator dist/GPA\ Simulator.app/Contents/MacOS/
-          cp icon.png dist/GPA\ Simulator.app/Contents/Resources/
-      
-      - name: Create DMG
-        run: |
-          brew install create-dmg
-          create-dmg \
-            --volname "GPA Simulator" \
-            --volicon icon.png \
-            --window-pos 200 120 \
-            --window-size 800 600 \
-            --icon-size 120 \
-            --icon GPA\ Simulator.app 200 190 \
-            gpa-simulator.dmg \
-            dist/GPA\ Simulator.app/
-      
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v3
-
-          # Use the .spec file if present; avoid makespec flags when a .spec exists
           if [ -f "gpa_simulator.spec" ]; then
             pyinstaller gpa_simulator.spec
           else
@@ -231,18 +170,16 @@ jobs:
       
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
-
         with:
           name: gpa-simulator-macos
           path: gpa-simulator.dmg
           retention-days: 30
-
           if-no-files-found: ignore
-
 
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       
@@ -259,8 +196,6 @@ jobs:
           distribution: 'adopt'
       
       - name: Install buildozer dependencies
-continue-on-error: true
-
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -276,13 +211,9 @@ continue-on-error: true
             libswscale-dev \
             libavformat-dev \
             libavcodec-dev \
-
             zlib1g-dev \
             android-sdk \
             android-ndk
-
-            zlib1g-dev
-
       
       - name: Install Python dependencies
         run: |
@@ -323,21 +254,18 @@ continue-on-error: true
               GPASimulatorApp().run()
           EOF
       
-      - name: Create buildozer.spec
-
-
+      - name: Build Android APK
         run: |
           cd kivy_app
           buildozer android debug
       
       - name: Upload Android artifact
-        uses: actions/upload-artifact@v3
-
+        uses: actions/upload-artifact@v4
         with:
           name: gpa-simulator-android
           path: kivy_app/bin/*.apk
           retention-days: 30
-
+          if-no-files-found: ignore
 
   create-release:
     name: Create Release
@@ -347,9 +275,8 @@ continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       
-      - name: Download all artifact
-        uses: actions/download-artifact@v3
-
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
