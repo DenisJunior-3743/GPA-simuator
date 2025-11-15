@@ -46,12 +46,14 @@ jobs:
               new_tag="v${major}.${minor}.${patch}"
             fi
           fi
+          # Append macOS OS suffix to avoid conflicts with other OS builds
+          new_tag="${new_tag}-macos"
           echo "New tag: $new_tag"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag "$new_tag"
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$new_tag"
-          echo "::set-output name=new_tag::$new_tag"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
   build:
     name: Build macOS
     runs-on: macos-latest
@@ -63,9 +65,9 @@ jobs:
           fetch-depth: 0
       - name: Install Python deps
         run: |
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
+          python3 -m pip install --upgrade pip --break-system-packages
+          pip install -r requirements.txt --break-system-packages
+          pip install pyinstaller --break-system-packages
       - name: Build with PyInstaller
         run: |
           if [ -f "gpa_simulator.spec" ]; then
