@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Required GPA for Target CGPA</h1>
+    <p class="lead">Enter your target CGPA and current totals. We'll show the GPA you need next semester to reach that target.</p>
+    <form id="opt4-form">
+      <div style="margin-bottom:10px">
+        <label>Old CGPA (before upcoming semester)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="old-cgpa" class="input" placeholder="e.g. 3.50">
+          <button type="button" id="btn-load-defaults" class="btn" style="display:none">Load vault defaults</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Old total CU (completed before upcoming semester)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="old-cu" class="input" placeholder="e.g. 90">
+          <button type="button" id="btn-old-cu-from-semesters" class="btn">Enter by semesters</button>
+        </div>
+        <div id="old-cu-semesters" style="margin-top:8px;display:none"></div>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Upcoming semester CU (new semester)</label>
+        <input id="new-cu" class="input" placeholder="e.g. 18">
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Target CGPA</label>
+        <input id="target-cgpa" class="input" placeholder="e.g. 4.00">
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="cta" type="button" id="btn-compute">Compute required GPA</button>
+        <button type="button" class="btn" id="btn-clear" onclick="document.getElementById('opt4-form').reset(); document.getElementById('old-cu-semesters').style.display='none'; document.getElementById('opt4-result').style.display='none';">Clear</button>
+      </div>
+    </form>
+
+    <div id="opt4-result" style="margin-top:12px;display:none"></div>
+    <div id="user-logged-in" data-value="{% if session.user_id %}1{% else %}0{% endif %}" style="display:none"></div>
+
+    <script>
+      const userLoggedIn = parseInt(document.getElementById('user-logged-in').dataset.value || '0', 10);
+
+      // Show vault defaults button when logged in
+      if (userLoggedIn) document.getElementById('btn-load-defaults').style.display = 'inline-block';
+
+      document.getElementById('btn-load-defaults').addEventListener('click', async () => {
+        try {
+          const res = await fetch('/api/vault_defaults');
+          if (!res.ok) throw new Error('Not logged in or no data');
+          const j = await res.json();
+          if (j.old_cgpa !== null && j.old_cgpa !== undefined) document.getElementById('old-cgpa').value = j.old_cgpa;
+          if (j.old_cu !== null && j.old_cu !== undefined) document.getElementById('old-cu').value = j.old_cu;
+        } catch (e) {
+          alert('Unable to load vault defaults');
+        }
+      });
+
+      // Enter old CU by semesters (borrowed pattern from option2/3)
+      function computeSemesterCountOpt4() {
+        // simple prompt for year and semester via small inputs we'll create on demand
+        const html = `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <div style="display:flex;flex-direction:column"><label style="font-size:12px">Current academic year</label><select id="opt4-acad-year" class="input" style="width:120px"><option value="1">Year 1</option><option value="2">Year 2</option><option value="3">Year 3</option><option value="4">Year 4</option><option value="5">Year 5</option></select></div>
+            <div style="display:flex;flex-direction:column"><label style="font-size:12px">Current semester</label><select id="opt4-acad-sem" class="input" style="width:100px"><option value="1">Sem 1</option><option value="2">Sem 2</option></select></div>
+            <button class="btn" id="opt4-gen-semesters">Generate</button>
+          </div>
+          <div id="opt4-sem-list"></div>`;
+        const container = document.getElementById('old-cu-semesters');
+        container.innerHTML = html;
+        container.style.display = 'block';
+
+        document.getElementById('opt4-gen-semesters').addEventListener('click', (e) => {
+          e.preventDefault();
+          const y = parseInt(document.getElementById('opt4-acad-year').value,10);
+          const s = parseInt(document.getElementById('opt4-acad-sem').value,10);
+          const n = (y - 1) * 2 + s; // total semesters up to and including current
+          const list = document.getElementById('opt4-sem-list');
+          list.innerHTML = '';
+          if (!n || n < 1) { list.innerHTML = '<div class="muted">No completed semesters yet.</div>'; return; }
+          for (let i=1;i<=n;i++){
+            const year = Math.floor((i-1)/2)+1; const sem = ((i-1)%2)+1;
+            const row = document.createElement('div'); row.style.display='flex'; row.style.gap='8px'; row.style.marginBottom='6px'; row.style.flexWrap='wrap';
+            row.innerHTML = `<label style='width:220px'>Year ${year} Semester ${sem}</label><div style='display:flex;gap:6px;align-items:center'><input type='radio' name='sem${i}_mode' value='total' checked onchange='toggleSemMode(${i})'> Total CU <input type='radio' name='sem${i}_mode' value='courses' onchange='toggleSemMode(${i})'> By Courses</div><div id='sem${i}_input' style='width:100%'><input class='input' id='sem${i}_cu' type='number' min='0' placeholder='0' style='width:120px'></div>`;
+            list.appendChild(row);
+          }
+          // add a button to sum values
+          const sbtn = document.createElement('div'); sbtn.style.marginTop='8px'; sbtn.innerHTML = '<button type="button" class="btn" id="opt4-sum-cu">Use summed CU</button>';
+          list.appendChild(sbtn);
+          document.getElementById('opt4-sum-cu').addEventListener('click', (e) => {
+            e.preventDefault();
+            let sum = 0;
+            for (let i = 1; i <= n; i++) {
+              const mode = document.querySelector(`input[name="sem${i}_mode"]:checked`);
+              if (mode && mode.value === 'courses') {
+                // Sum up all courses in this semester
+                const courseInputs = document.querySelectorAll(`select[name="sem${i}_course_cu"]`);
+                courseInputs.forEach(inp => { sum += parseInt(inp.value||'0',10); });
+              } else {
+                // Use total CU input
+                const inp = document.getElementById(`sem${i}_cu`);
+                if (inp) sum += parseInt(inp.value||'0',10);
+              }
+            }
+            document.getElementById('old-cu').value = sum;
+            // hide semester entry
+            document.getElementById('old-cu-semesters').style.display = 'none';
+            attachComputeHandler(); // Re-attach compute button listener after DOM changes
+          });
+        });
+      }
+
+      // Toggle between total CU and courses mode for each semester
+      function toggleSemMode(semIndex) {
+        const mode = document.querySelector(`input[name="sem${semIndex}_mode"]:checked`).value;
+        const container = document.getElementById(`sem${semIndex}_input`);
+        if (mode === 'total') {
+          container.innerHTML = `<input class='input' id='sem${semIndex}_cu' type='number' min='0' placeholder='0' style='width:120px'>`;
+        } else {
+          // By courses mode
+          const numCoursesHtml = `<div style='display:flex;gap:6px;align-items:center'><label>Number of courses:</label><input type='number' id='sem${semIndex}_num_courses' min='0' max='10' value='0' class='input' style='width:80px' onchange='generateCourseInputs(${semIndex})'></div><div id='sem${semIndex}_courses' style='margin-top:6px'></div>`;
+          container.innerHTML = numCoursesHtml;
+        }
+      }
+
+      // Generate course CU inputs for a semester
+      function generateCourseInputs(semIndex) {
+        const numCourses = parseInt(document.getElementById(`sem${semIndex}_num_courses`).value || '0', 10);
+        const coursesDiv = document.getElementById(`sem${semIndex}_courses`);
+        coursesDiv.innerHTML = '';
+        for (let c = 1; c <= numCourses; c++) {
+          const courseRow = document.createElement('div');
+          courseRow.style.display = 'flex';
+          courseRow.style.gap = '8px';
+          courseRow.style.marginBottom = '6px';
+          courseRow.style.alignItems = 'center';
+          courseRow.innerHTML = `<label style='width:80px'>Course ${c}:</label><select name='sem${semIndex}_course_cu' class='input' style='width:80px'><option value='1'>1</option><option value='2'>2</option><option value='3' selected>3</option><option value='4'>4</option><option value='5'>5</option></select>`;
+          coursesDiv.appendChild(courseRow);
+        }
+        // Add confirm button after courses
+        if (numCourses > 0) {
+          const confirmBtn = document.createElement('button');
+          confirmBtn.type = 'button';
+          confirmBtn.className = 'btn';
+          confirmBtn.style.marginTop = '8px';
+          confirmBtn.textContent = 'Done with courses';
+          confirmBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Button serves as confirmation - user can proceed
+          });
+          coursesDiv.appendChild(confirmBtn);
+        }
+      }
+
+      document.getElementById('btn-old-cu-from-semesters').addEventListener('click', () => {
+        computeSemesterCountOpt4();
+      });
+
+      // Compute required GPA - use function to allow re-attachment after DOM changes
+      function attachComputeHandler() {
+        const btn = document.getElementById('btn-compute');
+        if (!btn) return;
+        btn.onclick = null; // clear old listener
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const oldCgpaV = parseFloat(document.getElementById('old-cgpa').value || '0');
+          const oldCuV = parseInt(document.getElementById('old-cu').value || '0', 10);
+          const newCuV = parseInt(document.getElementById('new-cu').value || '0', 10);
+          const targetV = parseFloat(document.getElementById('target-cgpa').value || '0');
+          if (isNaN(oldCgpaV) || oldCgpaV<0 || oldCgpaV>5) { alert('Enter valid old CGPA (0.0 - 5.0)'); return; }
+          if (isNaN(oldCuV) || oldCuV<0) { alert('Enter valid old total CU (>=0)'); return; }
+          if (isNaN(newCuV) || newCuV<1) { alert('Enter valid upcoming semester CU (>=1)'); return; }
+          if (isNaN(targetV) || targetV<0 || targetV>5) { alert('Enter valid target CGPA (0.0 - 5.0)'); return; }
+          // required = (target*(old+new) - old*oldcu)/new
+          const numerator = targetV*(oldCuV + newCuV) - (oldCgpaV * oldCuV);
+          const required = numerator / newCuV;
+          const reqRounded = Math.round(required * 100) / 100;
+          const out = document.getElementById('opt4-result');
+          out.style.display = 'block';
+          if (required > 5.0) {
+            out.innerHTML = `<div class="alert" style="padding:12px;border-radius:6px;margin-top:8px"><strong>Target Not Achievable</strong><br/>You would need a GPA of <strong>${reqRounded.toFixed(2)}</strong> to reach ${targetV.toFixed(2)}, but the maximum GPA is 5.00.</div>`;
+          } else if (required < 0) {
+            out.innerHTML = `<div class="result-box" style="padding:12px;border-radius:6px;background:#E8F5E9;border:1px solid #4CAF50"><strong>Already Above Target</strong><br/>Your current CGPA (${oldCgpaV.toFixed(2)}) already exceeds your target of ${targetV.toFixed(2)}. Required GPA: <strong>0.00</strong></div>`;
+          } else {
+            out.innerHTML = `<div class="result-box" style="padding:12px;border-radius:6px;background:#F0F8FF;border:1px solid #2196F3"><div><strong>Required GPA for Target:</strong> <span style="font-size:1.3em;color:#00A859;font-weight:bold">${reqRounded.toFixed(2)}</span></div><div style="margin-top:8px;color:#666;font-size:0.9em">Target CGPA: <strong>${targetV.toFixed(2)}</strong> • Total CU after semester: <strong>${oldCuV + newCuV}</strong></div></div>`;
+          }
+        });
+      }
+      attachComputeHandler();
+    </script>
+  </div>
+{% endblock %}

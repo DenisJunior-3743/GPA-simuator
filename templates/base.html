@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPA Simulator</title>
+  <link rel="stylesheet" href="/static/css/ui.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      {% include '_nav.html' %}
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  {% include '_footer_home.html' %}
+  <footer class="site-footer">
+    <div class="container">Built for offline use • local SQLite vault</div>
+    <div class="container developer">Developed by Denis Junior • denisjunior3743@gmail.com • 0762924109</div>
+  </footer>
+  <script>
+    // Small helper to load option3 summary into a container
+    async function loadOption3(){
+      const res = await fetch('/option3/summary');
+      const html = await res.text();
+      document.getElementById('option3-container').innerHTML = html;
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      const el = document.getElementById('option3-container');
+      if(el) loadOption3();
+    });
+  </script>
+</body>
+</html>

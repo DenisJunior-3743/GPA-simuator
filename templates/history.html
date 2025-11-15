@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:800px;margin:24px auto;padding:20px">
+    <h1 class="h1">Academic History</h1>
+    <p class="lead">Your saved semesters and grades</p>
+
+    {% if summary and summary|length > 0 %}
+      <div style="margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:12px">
+          <div style="padding:12px;background:#F0F8FF;border:1px solid #2196F3;border-radius:6px;text-align:center">
+            <div style="font-size:0.9em;color:#666">Total Semesters</div>
+            <div style="font-size:1.8em;font-weight:bold;color:#2196F3">{{ summary|length }}</div>
+          </div>
+          <div style="padding:12px;background:#E8F5E9;border:1px solid #4CAF50;border-radius:6px;text-align:center">
+            <div style="font-size:0.9em;color:#666">Total CU</div>
+            <div style="font-size:1.8em;font-weight:bold;color:#4CAF50">{{ total_cu }}</div>
+          </div>
+          <div style="padding:12px;background:#FFF3E0;border:1px solid #FF9800;border-radius:6px;text-align:center">
+            <div style="font-size:0.9em;color:#666">Current CGPA</div>
+            <div style="font-size:1.8em;font-weight:bold;color:#FF9800">{{ summary[-1].cgpa|round(2) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px">
+        <h3 style="margin-bottom:12px">Semester Records</h3>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:0.95em">
+            <thead>
+              <tr style="background:#f0f0f0;border-bottom:2px solid #ddd">
+                <th style="padding:10px;text-align:left">Year</th>
+                <th style="padding:10px;text-align:left">Semester</th>
+                <th style="padding:10px;text-align:right">Sem GPA</th>
+                <th style="padding:10px;text-align:right">Sem CU</th>
+                <th style="padding:10px;text-align:right">CGPA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sem in summary %}
+              <tr style="border-bottom:1px solid #eee">
+                <td style="padding:10px">Year {{ sem.academic_year }}</td>
+                <td style="padding:10px">Semester {{ sem.semester_num }}</td>
+                <td style="padding:10px;text-align:right;font-weight:600">{{ sem.gpa|round(2) }}</td>
+                <td style="padding:10px;text-align:right">{{ sem.total_cu }}</td>
+                <td style="padding:10px;text-align:right;font-weight:600;color:#FF9800">{{ sem.cgpa|round(2) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:8px">
+        <a class="cta" href="/save-semester">Save another semester</a>
+      </div>
+    {% else %}
+      <div class="alert" style="padding:12px;border-radius:6px;margin:20px 0">
+        <strong>No saved semesters yet</strong><br/>
+        Start saving your academic records to see them here.
+      </div>
+      <div style="margin-top:20px;display:flex;gap:8px">
+        <a class="cta" href="/save-semester">Save first semester</a>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

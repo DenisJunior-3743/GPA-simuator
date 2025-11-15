@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:820px;margin:24px auto;padding:20px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <h1 class="h1" style="margin:0">Quick GPA Calculation</h1>
+    </div>
+    <p class="lead">Enter your courses for the current semester. Credit units (CU) must be 1–5.</p>
+    <form method="post" id="gpa-form">
+      <label>Number of courses</label>
+      <input class="input" name="num_courses" id="num-courses" type="number" min="1" max="20" required>
+      <div id="courses-fields" style="margin-top:12px;display:flex;flex-direction:column;gap:10px"></div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button class="cta" type="button" id="btn-next" onclick="generateCourseFields()">Next</button>
+        <button class="cta" type="submit" style="display:none" id="btn-calc">Calculate GPA</button>
+        <button class="btn link" type="button" id="btn-clear">Clear</button>
+      </div>
+    </form>
+    <!-- Result panel / spinner for AJAX -->
+    <div id="result-panel" style="display:none;margin-top:16px;transition:all 300ms ease;">
+      <div id="result-box" class="info-box" style="opacity:0;transform:translateY(6px);transition:all 300ms ease;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <strong id="result-title">Calculated GPA:</strong>
+          <span id="result-value" style="margin-left:8px;font-size:1.2em"></span>
+        </div>
+        <div id="spinner" style="width:28px;height:28px;display:none;margin-left:12px">
+          <svg viewBox="0 0 50 50" style="width:28px;height:28px;">
+            <circle cx="25" cy="25" r="20" stroke="var(--primary)" stroke-width="4" fill="none" stroke-linecap="round" stroke-dasharray="31.4 31.4">
+              <animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="1s" repeatCount="indefinite"/>
+            </circle>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Helper: fade in result box
+      function showResult(resultText){
+        const panel = document.getElementById('result-panel');
+        const box = document.getElementById('result-box');
+        document.getElementById('result-value').textContent = resultText;
+        panel.style.display = 'block';
+        // allow DOM update then animate
+        requestAnimationFrame(()=>{
+          box.style.opacity = '1';
+          box.style.transform = 'translateY(0)';
+        });
+      }
+
+      function showError(msg){
+        const box = document.getElementById('result-box');
+        box.classList.add('alert');
+        box.style.background = 'var(--danger-bg, #fff0f0)';
+        document.getElementById('result-title').textContent = 'Error:';
+        showResult(msg);
+      }
+
+      // Intercept form submit and send via fetch to API
+      const form = document.getElementById('gpa-form');
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        // Basic client-side validation
+        const num = parseInt(document.getElementById('num-courses').value || 0, 10);
+        if (!num || num < 1 || num > 20){
+          alert('Please enter a valid number of courses (1-20).');
+          return;
+        }
+        const fd = new FormData(form);
+        // Show temporary loading
+        showResult('Calculating...');
+        document.getElementById('result-value').style.opacity = '0.6';
+        fetch('/api/option1', {method: 'POST', body: fd})
+          .then(r => r.json().then(j => ({ok: r.ok, status: r.status, body: j})))
+          .then(resp => {
+            if (!resp.ok) {
+              showError(resp.body.error || 'Unknown error');
+              return;
+            }
+            const res = resp.body;
+            showResult(res.result);
+            document.getElementById('result-value').style.opacity = '1';
+          })
+          .catch(err => {
+            showError(err.message || 'Network error');
+          });
+      });
+
+      // Clear button handler: reset form and UI state so user can re-run
+      document.getElementById('btn-clear').addEventListener('click', function(){
+        const form = document.getElementById('gpa-form');
+        form.reset();
+        // clear generated fields
+        const container = document.getElementById('courses-fields');
+        container.innerHTML = '';
+        // reset buttons
+        document.getElementById('btn-next').style.display = 'inline-block';
+        document.getElementById('btn-calc').style.display = 'none';
+        // hide result panel
+        const panel = document.getElementById('result-panel');
+        const box = document.getElementById('result-box');
+        if(panel) panel.style.display = 'none';
+        if(box){
+          box.style.opacity = '0';
+          box.style.transform = 'translateY(6px)';
+          box.classList.remove('alert');
+          box.style.background = '';
+          document.getElementById('result-title').textContent = 'Calculated GPA:';
+          document.getElementById('result-value').textContent = '';
+        }
+      });
+
+    
+      function generateCourseFields(){
+        const gradeOptions = ['A','B+','B','C+','C','D+','D','F'];
+        const n = parseInt(document.getElementById('num-courses').value || 0, 10);
+        const container = document.getElementById('courses-fields');
+        container.innerHTML = '';
+        if (!n || n < 1) {
+          alert('Please enter a valid number of courses (1-20).');
+          return;
+        }
+        for(let i=1;i<=n;i++){
+          const field = document.createElement('div');
+          field.style.display = 'grid';
+          field.style.gridTemplateColumns = '1fr 120px';
+          field.style.gap = '10px';
+          field.innerHTML = `
+            <div>
+              <label>Course ${i} Grade</label>
+              <select class='input' name='grade_${i}' required>
+                ${gradeOptions.map(g => `<option value='${g}'>${g}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Course ${i} CU</label>
+              <select class='input' name='cu_${i}' required>
+                <option value='1'>1</option>
+                <option value='2'>2</option>
+                <option value='3' selected>3</option>
+                <option value='4'>4</option>
+                <option value='5'>5</option>
+              </select>
+            </div>
+          `;
+          container.appendChild(field);
+        }
+        document.getElementById('btn-next').style.display = 'none';
+        document.getElementById('btn-calc').style.display = 'inline-block';
+        document.getElementById('btn-calc').scrollIntoView({behavior:'smooth'});
+      }
+    </script>
+  </div>
+  {# Footer home link provided by base layout include; removed local duplicate #}
+{% endblock %}

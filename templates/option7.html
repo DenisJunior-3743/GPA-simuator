@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Option 7: Reduced Load Simulation</h1>
+    <p class="lead">Explore how taking a reduced course load affects your GPA/CGPA trajectory. Enter your planned reduced load below.</p>
+    <form>
+      <label>Planned Credit Units</label>
+      <input class="input" placeholder="e.g. 9">
+      <label style="margin-top:8px">Expected GPA</label>
+      <input class="input" placeholder="e.g. 3.50">
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="alert('Will simulate reduced load (demo)')">Simulate</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Reduced Load Guidance:</strong>
+      <ul>
+        <li>Use this to plan semesters with fewer courses</li>
+        <li>See impact on graduation timeline and CGPA</li>
+        <li>Save results to your vault for future reference</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

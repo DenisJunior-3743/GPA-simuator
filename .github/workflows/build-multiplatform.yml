@@ -1,0 +1,245 @@
+name: Build Multi-Platform Executables
+
+# Trigger on pushes to main/master, tags, and manual dispatch
+on:
+  push:
+    branches: [ main, master, simulator_gui ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master, simulator_gui ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller gpa_simulator.spec
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gpa-simulator-windows
+          path: dist/gpa_simulator/
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y appimage-builder
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller gpa_simulator.spec --onedir
+      
+      - name: Create AppImage
+        run: |
+          mkdir -p appimage/usr/bin
+          cp -r dist/gpa_simulator/* appimage/usr/bin/
+          cd appimage
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+          ./linuxdeploy-x86_64.AppImage --appdir=usr/bin -e gpa_simulator -d ../gpa-simulator.desktop -i ../icon.png --create-appimage
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gpa-simulator-linux
+          path: gpa-simulator*.AppImage
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS App Bundle
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      
+      - name: Build executable with PyInstaller
+        run: |
+          pyinstaller gpa_simulator.spec
+      
+      - name: Create macOS App Bundle
+        run: |
+          mkdir -p dist/GPA\ Simulator.app/Contents/MacOS
+          mkdir -p dist/GPA\ Simulator.app/Contents/Resources
+          cp dist/gpa_simulator/gpa_simulator dist/GPA\ Simulator.app/Contents/MacOS/
+          cp icon.png dist/GPA\ Simulator.app/Contents/Resources/
+      
+      - name: Create DMG
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "GPA Simulator" \
+            --volicon icon.png \
+            --window-pos 200 120 \
+            --window-size 800 600 \
+            --icon-size 120 \
+            --icon GPA\ Simulator.app 200 190 \
+            gpa-simulator.dmg \
+            dist/GPA\ Simulator.app/
+      
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gpa-simulator-macos
+          path: gpa-simulator.dmg
+          retention-days: 30
+
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          java-version: '11'
+          distribution: 'adopt'
+      
+      - name: Install buildozer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            python3-dev \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            android-sdk \
+            android-ndk
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install kivy buildozer cython
+          pip install -r requirements.txt
+      
+      - name: Create Kivy wrapper for Flask app
+        run: |
+          mkdir -p kivy_app
+          cat > kivy_app/main.py << 'EOF'
+          from kivy.app import App
+          from kivy.uix.boxlayout import BoxLayout
+          from kivy.garden.webview import WebView
+          import threading
+          import sys
+          import os
+          sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+          from ui_app import app as flask_app
+          
+          class GPASimulatorApp(App):
+              def build(self):
+                  layout = BoxLayout()
+                  webview = WebView()
+                  webview.url = 'http://127.0.0.1:5000'
+                  layout.add_widget(webview)
+                  
+                  # Start Flask in background thread
+                  def run_flask():
+                      flask_app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)
+                  
+                  thread = threading.Thread(target=run_flask, daemon=True)
+                  thread.start()
+                  
+                  return layout
+          
+          if __name__ == '__main__':
+              GPASimulatorApp().run()
+          EOF
+      
+      - name: Create buildozer.spec
+        run: |
+          cd kivy_app
+          buildozer android debug
+      
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: gpa-simulator-android
+          path: kivy_app/bin/*.apk
+          retention-days: 30
+
+  create-release:
+    name: Create Release
+    needs: [build-windows, build-linux, build-macos, build-android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            gpa-simulator-windows/*
+            gpa-simulator-linux/*
+            gpa-simulator-macos/*
+            gpa-simulator-android/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

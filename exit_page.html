@@ -1,0 +1,72 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GPA Simulator</title>
+  <link rel="stylesheet" href="/static/css/ui.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="nav-wrap" style="width:100%;display:flex;align-items:center;gap:12px">
+  <div class="nav-left" style="display:flex;gap:8px;align-items:center">
+    <!-- left intentionally left blank to keep brand centered -->
+  </div>
+
+  <div class="nav-center" style="flex:1;text-align:center">
+    <div class="brand">GPA / CGPA <span class="brand-accent">Simulator</span></div>
+    
+  </div>
+
+  <div class="nav-right" style="display:flex;gap:8px;align-items:center">
+    
+      <a class="btn nav-register" href="/login">Register</a>
+      <a class="btn nav-login" href="/login">Login</a>
+    
+  </div>
+</div>
+    </div>
+  </header>
+  <main class="container">
+    
+  <div class="card" style="max-width:720px;margin:40px auto;padding:24px;text-align:center">
+    <h1 class="h1">Goodbye</h1>
+    <p class="lead">You've exited the simulator. Your session has been cleared.</p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+      <button class="cta" id="btn-close">Close this tab</button>
+      <a class="btn" href="/">Return to Home</a>
+    </div>
+    <script>
+      document.getElementById('btn-close').addEventListener('click', function(){
+        try { window.open('','_self').close(); } catch(e) { window.location.href = '/'; }
+      });
+    </script>
+  </div>
+
+  </main>
+  <div style="width:100%;text-align:center;margin:18px 0;display:flex;gap:8px;justify-content:center;align-items:center">
+  
+    <a class="btn" href="/">← Home</a>
+  
+  <!-- Exit button: clears session and shows exit page -->
+  <a class="btn red" href="/exit">Exit</a>
+</div>
+  <footer class="site-footer">
+    <div class="container">Built for offline use • local SQLite vault</div>
+    <div class="container developer">Developed by Denis Junior • denisjunior3743@gmail.com • 0762924109</div>
+  </footer>
+  <script>
+    // Small helper to load option3 summary into a container
+    async function loadOption3(){
+      const res = await fetch('/option3/summary');
+      const html = await res.text();
+      document.getElementById('option3-container').innerHTML = html;
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      const el = document.getElementById('option3-container');
+      if(el) loadOption3();
+    });
+  </script>
+</body>
+</html>

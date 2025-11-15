@@ -1,0 +1,262 @@
+name: Build Cross-Platform Releases
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ '**' ]
+    tags: [ 'v*', 'v*.*', 'v*.*.*' ]
+  workflow_dispatch:
+
+jobs:
+  bump-tag:
+    name: Bump Version & Create Tag
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+    steps:
+      - name: Checkout repo (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine next tag
+        id: tag
+        shell: bash
+        run: |
+          set -e
+          git fetch --tags
+          latest=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$latest" ]; then
+            next="v1.0"
+          else
+            ver=${latest#v}
+            IFS='.' read -r major minor patch <<< "$ver"
+            if [ -z "$minor" ]; then
+              minor=1
+              next="v${major}.${minor}"
+            else
+              if [ -z "$patch" ]; then
+                minor=$((minor+1))
+                next="v${major}.${minor}"
+              else
+                minor=$((minor+1))
+                next="v${major}.${minor}.0"
+              fi
+            fi
+          fi
+          echo "latest=$latest" >> $GITHUB_OUTPUT
+          echo "next=$next" >> $GITHUB_OUTPUT
+          echo "Next tag: $next"
+
+      - name: Create and push tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.tag.outputs.next }}
+          git push origin ${{ steps.tag.outputs.next }}
+
+  build-windows:
+    name: Build Windows Executable
+    runs-on: windows-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      
+      - name: Build Windows EXE
+        run: |
+          pyinstaller gpa_simulator.spec --distpath "./dist-windows"
+      
+      - name: Package Windows
+        run: |
+          mkdir "gpa-cgpa-simulator-windows"
+          xcopy "dist-windows\gpa_simulator\*" "gpa-cgpa-simulator-windows\" /E /I
+          if exist run_simulator.bat copy run_simulator.bat gpa-cgpa-simulator-windows\
+          if exist gpa.ico copy gpa.ico gpa-cgpa-simulator-windows\
+          echo GPA & CGPA Simulator - Windows version > gpa-cgpa-simulator-windows\README.txt
+          echo Double-click run_simulator.bat to start >> gpa-cgpa-simulator-windows\README.txt
+          powershell Compress-Archive -Path gpa-cgpa-simulator-windows -DestinationPath gpa-cgpa-simulator-windows.zip
+      
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows
+          path: gpa-cgpa-simulator-windows.zip
+
+  build-linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libfuse-dev
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller appdirs
+      
+      - name: Build Linux executable
+        run: |
+          pyinstaller gpa_simulator.spec --distpath "./dist-linux" --onedir
+      
+      - name: Download linuxdeploy
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+      
+      - name: Create AppImage
+        run: |
+          export LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+          mkdir -p appdir/usr/bin
+          cp -r dist-linux/gpa_simulator/* appdir/usr/bin/ || true
+          if [ -f gpa.ico ]; then cp gpa.ico appdir/usr/bin/ || true; fi
+          ./linuxdeploy-x86_64.AppImage --appdir=appdir -e appdir/usr/bin/gpa_simulator -d appdir/usr/bin/gpa_simulator.desktop --create-appimage -o "gpa-cgpa-simulator-x86_64.AppImage" || echo "AppImage creation completed with warnings"
+          if [ ! -f "gpa-cgpa-simulator-x86_64.AppImage" ]; then
+            cd appdir/usr/bin && tar czf ../../../gpa-cgpa-simulator-linux.tar.gz * && cd ../../../
+          fi
+      
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux
+          path: |
+            gpa-cgpa-simulator-x86_64.AppImage
+            gpa-cgpa-simulator-linux.tar.gz
+          if-no-files-found: ignore
+
+  build-macos:
+    name: Build macOS App
+    runs-on: macos-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+      
+      - name: Build macOS app
+        run: |
+          pyinstaller gpa_simulator.spec --distpath "./dist-macos" --windowed
+      
+      - name: Create DMG
+        run: |
+          mkdir -p dmg-temp
+          cp -r dist-macos/gpa_simulator.app dmg-temp/ || true
+          if [ -f README.md ]; then cp README.md dmg-temp/; fi
+          if [ -f gpa.ico ]; then cp gpa.ico dmg-temp/; fi
+          hdiutil create -volname "GPA & CGPA Simulator" -srcfolder dmg-temp -ov -format UDZO gpa-cgpa-simulator-macos.dmg
+
+  build-android:
+    name: Build Android APK (optional)
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for buildozer.spec
+        id: check
+        run: |
+          if [ -f buildozer.spec ]; then echo "exists=true" >> $GITHUB_OUTPUT; else echo "exists=false" >> $GITHUB_OUTPUT; fi
+
+      - name: Setup Java & Buildozer
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openjdk-11-jdk zip unzip python3-pip python3-venv
+          python3 -m pip install --upgrade pip
+          pip3 install buildozer
+
+      - name: Build APK (debug)
+        if: steps.check.outputs.exists == 'true'
+        run: |
+          buildozer -v android debug
+
+      - name: Upload APK artifact
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: android
+          path: bin/*.apk
+          if-no-files-found: ignore
+
+  release:
+    name: Create GitHub Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Create Release Notes
+        run: |
+          echo "# GPA & CGPA Simulator Release" > release-notes.md
+          echo "" >> release-notes.md
+          echo "## Downloads" >> release-notes.md
+          echo "- Windows: Unzip and run the .exe" >> release-notes.md
+          echo "- Linux: Run the AppImage or extract the tar.gz" >> release-notes.md
+          echo "- macOS: Open the DMG and drag to Applications" >> release-notes.md
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            windows/*.zip
+            linux/*.AppImage
+            linux/*.tar.gz
+            macos/*.dmg
+          body_path: release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

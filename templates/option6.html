@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Option 6: GPA/CGPA Simulation</h1>
+    <p class="lead">Simulate future GPA/CGPA based on planned grades and credit units. Enter your expected grades below.</p>
+    <form>
+      <label>Expected GPA</label>
+      <input class="input" placeholder="e.g. 4.00">
+      <label style="margin-top:8px">Expected Credit Units</label>
+      <input class="input" placeholder="e.g. 18">
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="alert('Will simulate GPA/CGPA (demo)')">Simulate</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Simulation Guidance:</strong>
+      <ul>
+        <li>Use realistic grade estimates for best results</li>
+        <li>Simulations do not affect your actual records</li>
+        <li>Save results to your vault for future reference</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

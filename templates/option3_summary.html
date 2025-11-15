@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:820px;margin:24px auto;padding:20px">
+    <h1 class="h1">Saved Semesters</h1>
+    {% if saved is none %}
+      <div class="muted">You are not logged in. Log in to view saved semesters.</div>
+    {% elif not saved %}
+      <div class="muted">No saved semesters found.</div>
+    {% else %}
+      <table style="width:100%;border-collapse:collapse;margin-top:12px">
+        <thead><tr><th style="text-align:left">Year</th><th style="text-align:left">Semester</th><th style="text-align:left">GPA</th><th style="text-align:left">Total CU</th></tr></thead>
+        <tbody>
+          {% for s in saved %}
+            <tr>
+              <td>{{ s.academic_year }}</td>
+              <td>{{ s.semester_num }}</td>
+              <td>{{ '%.2f'|format(s.gpa) }}</td>
+              <td>{{ s.total_cu }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div style="margin-top:12px">Total CU: <strong>{{ total_cu }}</strong></div>
+    {% endif %}
+    <div style="margin-top:12px"><a class="btn" href="/option3">Back to Calculate CGPA</a></div>
+  </div>
+{% endblock %}
+{# Footer include in base.html provides Home link; extra summary UI removed to avoid duplicate content. #}
