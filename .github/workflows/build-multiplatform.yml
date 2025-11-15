@@ -29,8 +29,15 @@ jobs:
           pip install pyinstaller
       
       - name: Build executable with PyInstaller
+        shell: powershell
         run: |
-          pyinstaller gpa_simulator.spec
+          # Use the .spec file if present; avoid passing makespec flags when a .spec exists
+          if (Test-Path 'gpa_simulator.spec') {
+            pyinstaller gpa_simulator.spec
+          } else {
+            # Fallback: build with explicit options when no spec is provided
+            pyinstaller --distpath "./dist" --windowed main.py
+          }
 
       - name: Show Windows dist contents
         shell: cmd
@@ -38,6 +45,14 @@ jobs:
           echo "Listing dist directory contents:"
           if exist dist\gpa_simulator (dir dist\gpa_simulator) else (dir dist || echo No dist directory)
       
+      - name: Package Windows artifacts
+        shell: cmd
+        run: |
+          echo "Preparing Windows package directory"
+          if not exist gpa-cgpa-simulator-windows mkdir gpa-cgpa-simulator-windows
+          if exist dist\gpa_simulator\run_simulator.bat copy /Y dist\gpa_simulator\run_simulator.bat gpa-cgpa-simulator-windows\
+          if exist dist\gpa_simulator\* copy /Y dist\gpa_simulator\* gpa-cgpa-simulator-windows\
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
@@ -73,8 +88,13 @@ jobs:
       
       - name: Build executable with PyInstaller
         run: |
-          # Don't pass --onedir to PyInstaller when a .spec file is provided
-          pyinstaller gpa_simulator.spec
+          # Use the .spec file if present; avoid makespec flags when a .spec exists
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec
+          else
+            # Fallback: build a directory-based distribution
+            pyinstaller --distpath "./dist-linux" --onedir main.py
+          fi
 
       - name: Show Linux dist contents
         run: |
@@ -120,7 +140,12 @@ jobs:
       
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller gpa_simulator.spec
+          # Use the .spec file if present; avoid makespec flags when a .spec exists
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec
+          else
+            pyinstaller --distpath "./dist-macos" --windowed main.py
+          fi
       
       - name: Create macOS App Bundle
         run: |
