@@ -2,7 +2,5 @@
   "files.exclude": { "**/__pycache__": true },
   "[html]": { "editor.defaultFormatter": "esbenp.prettier-vscode" },
   "javascript.validate.enable": false,
-"eslint.enable": false,
-"python-envs.defaultEnvManager": "ms-python.python:system",
-"python-envs.pythonProjects": []
+  "eslint.enable": false
 }
