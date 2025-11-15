@@ -33,8 +33,9 @@ jobs:
           pyinstaller gpa_simulator.spec
 
       - name: Show Windows dist contents
+        shell: cmd
         run: |
-          echo "Listing dist directory contents:" 
+          echo "Listing dist directory contents:"
           if exist dist\gpa_simulator (dir dist\gpa_simulator) else (dir dist || echo No dist directory)
       
       - name: Upload Windows artifact
@@ -72,7 +73,8 @@ jobs:
       
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller gpa_simulator.spec --onedir
+          # Don't pass --onedir to PyInstaller when a .spec file is provided
+          pyinstaller gpa_simulator.spec
 
       - name: Show Linux dist contents
         run: |
