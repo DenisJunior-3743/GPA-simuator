@@ -14,7 +14,9 @@ jobs:
     name: Bump Version & Create Tag
     runs-on: ubuntu-latest
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-
+    outputs:
+      tag_name: ${{ steps.tag.outputs.next }}
+    
     steps:
       - name: Checkout repo (full)
         uses: actions/checkout@v4
@@ -57,18 +59,26 @@ jobs:
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.tag.outputs.next }}
-          git push origin ${{ steps.tag.outputs.next }}
+          if ! git rev-parse ${{ steps.tag.outputs.next }} >/dev/null 2>&1; then
+            git tag ${{ steps.tag.outputs.next }}
+            git push origin ${{ steps.tag.outputs.next }}
+            echo "Tag ${{ steps.tag.outputs.next }} created and pushed"
+          else
+            echo "Tag ${{ steps.tag.outputs.next }} already exists, skipping"
+          fi
 
   build-windows:
     name: Build Windows Executable
+    needs: [bump-tag]
     runs-on: windows-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -83,10 +93,16 @@ jobs:
           pip install pyinstaller
       
       - name: Build Windows EXE
+        shell: pwsh
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-windows"
+          if (Test-Path -Path "gpa_simulator.spec") {
+            pyinstaller gpa_simulator.spec --distpath "./dist-windows"
+          } else {
+            pyinstaller --onefile --noconsole gpa_simulator.py --distpath "./dist-windows"
+          }
       
       - name: Package Windows
+        shell: cmd
         run: |
           mkdir "gpa-cgpa-simulator-windows"
           xcopy "dist-windows\gpa_simulator\*" "gpa-cgpa-simulator-windows\" /E /I
@@ -94,23 +110,26 @@ jobs:
           if exist gpa.ico copy gpa.ico gpa-cgpa-simulator-windows\
           echo GPA & CGPA Simulator - Windows version > gpa-cgpa-simulator-windows\README.txt
           echo Double-click run_simulator.bat to start >> gpa-cgpa-simulator-windows\README.txt
-          powershell Compress-Archive -Path gpa-cgpa-simulator-windows -DestinationPath gpa-cgpa-simulator-windows.zip
+          powershell -Command "Compress-Archive -Path 'gpa-cgpa-simulator-windows' -DestinationPath 'gpa-cgpa-simulator-windows.zip'"
       
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows
           path: gpa-cgpa-simulator-windows.zip
 
   build-linux:
     name: Build Linux AppImage
+    needs: [bump-tag]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -131,7 +150,11 @@ jobs:
       
       - name: Build Linux executable
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-linux" --onedir
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec --distpath "./dist-linux"
+          else
+            pyinstaller --onefile gpa_simulator.py --distpath "./dist-linux"
+          fi
       
       - name: Download linuxdeploy
         run: |
@@ -150,7 +173,7 @@ jobs:
           fi
       
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux
           path: |
@@ -160,13 +183,16 @@ jobs:
 
   build-macos:
     name: Build macOS App
+    needs: [bump-tag]
     runs-on: macos-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -182,7 +208,11 @@ jobs:
       
       - name: Build macOS app
         run: |
-          pyinstaller gpa_simulator.spec --distpath "./dist-macos" --windowed
+          if [ -f "gpa_simulator.spec" ]; then
+            pyinstaller gpa_simulator.spec --distpath "./dist-macos"
+          else
+            pyinstaller --onefile --windowed gpa_simulator.py --distpath "./dist-macos"
+          fi
       
       - name: Create DMG
         run: |
@@ -194,13 +224,16 @@ jobs:
 
   build-android:
     name: Build Android APK (optional)
+    needs: [bump-tag]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
 
       - name: Check for buildozer.spec
         id: check
@@ -222,7 +255,7 @@ jobs:
 
       - name: Upload APK artifact
         if: steps.check.outputs.exists == 'true'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android
           path: bin/*.apk
@@ -230,15 +263,19 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build-windows, build-linux, build-macos]
+    needs: [bump-tag, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
       
       - name: Create Release Notes
         run: |
@@ -252,6 +289,7 @@ jobs:
       - name: Publish Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ needs.bump-tag.outputs.tag_name }}
           files: |
             windows/*.zip
             linux/*.AppImage
@@ -260,3 +298,5 @@ jobs:
           body_path: release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
