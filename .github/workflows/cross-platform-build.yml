@@ -74,9 +74,11 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -91,14 +93,8 @@ jobs:
           pip install pyinstaller
       
       - name: Build Windows EXE
-        shell: powershell
         run: |
-          # Use the .spec file if present; avoid makespec flags when a .spec exists
-          if (Test-Path 'gpa_simulator.spec') {
-            pyinstaller gpa_simulator.spec --distpath "./dist-windows"
-          } else {
-            pyinstaller --distpath "./dist-windows" --windowed main.py
-          }
+          pyinstaller gpa_simulator.spec --distpath "./dist-windows"
       
       - name: Package Windows
         run: |
@@ -123,9 +119,11 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -146,12 +144,7 @@ jobs:
       
       - name: Build Linux executable
         run: |
-          # Use the .spec file if present; avoid makespec flags when a .spec exists
-          if [ -f "gpa_simulator.spec" ]; then
-            pyinstaller gpa_simulator.spec --distpath "./dist-linux"
-          else
-            pyinstaller --distpath "./dist-linux" --onedir main.py
-          fi
+          pyinstaller gpa_simulator.spec --distpath "./dist-linux" --onedir
       
       - name: Download linuxdeploy
         run: |
@@ -185,9 +178,11 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
       
       - name: Set up Python 3.11
         uses: actions/setup-python@v4
@@ -203,12 +198,7 @@ jobs:
       
       - name: Build macOS app
         run: |
-          # Use the .spec file if present; avoid makespec flags when a .spec exists
-          if [ -f "gpa_simulator.spec" ]; then
-            pyinstaller gpa_simulator.spec --distpath "./dist-macos"
-          else
-            pyinstaller --distpath "./dist-macos" --windowed main.py
-          fi
+          pyinstaller gpa_simulator.spec --distpath "./dist-macos" --windowed
       
       - name: Create DMG
         run: |
@@ -225,9 +215,11 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout tag
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
 
       - name: Check for buildozer.spec
         id: check
@@ -262,8 +254,12 @@ jobs:
     if: ${{ startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.bump-tag.outputs.tag_name }}
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
       
@@ -279,6 +275,7 @@ jobs:
       - name: Publish Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ needs.bump-tag.outputs.tag_name }}
           files: |
             windows/*.zip
             linux/*.AppImage
