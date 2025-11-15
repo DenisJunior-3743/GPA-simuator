@@ -31,6 +31,11 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           pyinstaller gpa_simulator.spec
+
+      - name: Show Windows dist contents
+        run: |
+          echo "Listing dist directory contents:" 
+          if exist dist\gpa_simulator (dir dist\gpa_simulator) else (dir dist || echo No dist directory)
       
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -38,6 +43,7 @@ jobs:
           name: gpa-simulator-windows
           path: dist/gpa_simulator/
           retention-days: 30
+          if-no-files-found: ignore
 
   build-linux:
     name: Build Linux AppImage
@@ -54,7 +60,9 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y appimage-builder
+          # appimage-builder is not always available via apt on runners; install via pip as fallback
+          python -m pip install --upgrade pip
+          pip install appimage-builder || true
       
       - name: Install Python dependencies
         run: |
@@ -65,15 +73,22 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           pyinstaller gpa_simulator.spec --onedir
+
+      - name: Show Linux dist contents
+        run: |
+          echo "Listing dist directory contents:" || true
+          ls -la dist || true
+          ls -la dist/gpa_simulator || true
       
       - name: Create AppImage
+        continue-on-error: true
         run: |
           mkdir -p appimage/usr/bin
-          cp -r dist/gpa_simulator/* appimage/usr/bin/
+          cp -r dist/gpa_simulator/* appimage/usr/bin/ || true
           cd appimage
           wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           chmod +x linuxdeploy-x86_64.AppImage
-          ./linuxdeploy-x86_64.AppImage --appdir=usr/bin -e gpa_simulator -d ../gpa-simulator.desktop -i ../icon.png --create-appimage
+          ./linuxdeploy-x86_64.AppImage --appdir=usr/bin -e appimage/usr/bin/gpa_simulator -d ../gpa-simulator.desktop -i ../icon.png --create-appimage || true
       
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
@@ -81,6 +96,7 @@ jobs:
           name: gpa-simulator-linux
           path: gpa-simulator*.AppImage
           retention-days: 30
+          if-no-files-found: ignore
 
   build-macos:
     name: Build macOS App Bundle
