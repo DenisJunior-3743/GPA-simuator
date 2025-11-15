@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:40px auto;padding:24px;text-align:center">
+    <h1 class="h1">Goodbye</h1>
+    <p class="lead">You've exited the simulator. Your session has been cleared.</p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+      <button class="cta" id="btn-close">Close this tab</button>
+      <a class="btn" href="/">Return to Home</a>
+    </div>
+    <script>
+      document.getElementById('btn-close').addEventListener('click', function(){
+        try { window.open('','_self').close(); } catch(e) { window.location.href = '/'; }
+      });
+    </script>
+  </div>
+{% endblock %}

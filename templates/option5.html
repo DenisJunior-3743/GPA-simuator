@@ -1,0 +1,209 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Simulate Grade Combinations</h1>
+    <p class="lead">Find possible grade combinations to achieve your target semester GPA.</p>
+    <form id="opt5-form">
+      <div style="margin-bottom:10px">
+        <label>Number of courses in this semester</label>
+        <input id="num-courses" class="input" type="number" min="1" max="10" placeholder="e.g. 4">
+      </div>
+
+      <div id="courses-section" style="margin-bottom:10px;display:none">
+        <label>Course Credit Units (CU)</label>
+        <div id="courses-list" style="margin-top:8px"></div>
+      </div>
+
+      <div style="margin-bottom:10px;display:none" id="target-section">
+        <label>Target semester GPA</label>
+        <input id="target-gpa" class="input" type="number" min="0" max="5" step="0.01" placeholder="e.g. 4.0">
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="cta" type="button" id="btn-simulate">Simulate combinations</button>
+        <button type="button" class="btn" id="btn-clear" onclick="document.getElementById('opt5-form').reset(); document.getElementById('courses-section').style.display='none'; document.getElementById('target-section').style.display='none'; document.getElementById('opt5-results').style.display='none';">Clear</button>
+      </div>
+    </form>
+
+    <div id="opt5-results" style="margin-top:20px;display:none">
+      <div id="opt5-result-count" style="margin-bottom:12px;font-size:0.95em;color:#666"></div>
+      <div id="opt5-result-list" style="margin-bottom:12px"></div>
+      <div id="opt5-pagination" style="text-align:center;font-size:0.9em;color:#666;margin-top:12px"></div>
+      <div id="opt5-note" style="margin-top:16px;padding:12px;background:#F0F8FF;border:1px solid #2196F3;border-radius:6px;font-size:0.9em;color:#333;display:none"></div>
+    </div>
+
+    <script>
+      const MAX_RESULTS_PER_PAGE = 5;
+      let allResults = [];
+      let currentPage = 0;
+      let courses = [];
+
+      document.getElementById('num-courses').addEventListener('change', () => {
+        const n = parseInt(document.getElementById('num-courses').value || '0', 10);
+        if (n < 1 || n > 10) {
+          document.getElementById('courses-section').style.display = 'none';
+          document.getElementById('target-section').style.display = 'none';
+          return;
+        }
+        
+        // Generate course CU inputs
+        const list = document.getElementById('courses-list');
+        list.innerHTML = '';
+        for (let i = 1; i <= n; i++) {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.gap = '8px';
+          row.style.marginBottom = '6px';
+          row.style.alignItems = 'center';
+          row.innerHTML = `<label style='width:120px'>Course ${i} CU:</label><select class="course-cu-select input" style='width:100px' data-course='${i}'><option value='1'>1</option><option value='2'>2</option><option value='3' selected>3</option><option value='4'>4</option><option value='5'>5</option></select>`;
+          list.appendChild(row);
+        }
+        
+        document.getElementById('courses-section').style.display = 'block';
+        document.getElementById('target-section').style.display = 'block';
+      });
+
+      document.getElementById('btn-simulate').addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const numCourses = parseInt(document.getElementById('num-courses').value || '0', 10);
+        const targetGpa = parseFloat(document.getElementById('target-gpa').value || '0');
+        
+        if (isNaN(numCourses) || numCourses < 1 || numCourses > 10) {
+          alert('Enter valid number of courses (1-10)');
+          return;
+        }
+        
+        if (isNaN(targetGpa) || targetGpa < 0 || targetGpa > 5) {
+          alert('Enter valid target GPA (0.0 - 5.0)');
+          return;
+        }
+        
+        // Collect CUs
+        const cuSelects = document.querySelectorAll('.course-cu-select');
+        const cus = [];
+        cuSelects.forEach(sel => {
+          cus.push(parseInt(sel.value || '3', 10));
+        });
+        
+        if (cus.length !== numCourses) {
+          alert('Please fill in all course CU values');
+          return;
+        }
+        
+        try {
+          const res = await fetch('/api/simulate-grades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ num_courses: numCourses, cus: cus, target_gpa: targetGpa })
+          });
+          
+          if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to simulate combinations');
+            return;
+          }
+          
+          const data = await res.json();
+          
+          if (!data.results || data.results.length === 0) {
+            document.getElementById('opt5-results').style.display = 'block';
+            document.getElementById('opt5-result-list').innerHTML = `<div class="alert" style="padding:12px;border-radius:6px;margin-top:8px"><strong>No combinations found</strong><br/>The target GPA ${targetGpa} appears to be outside the achievable range for your course configuration.<br/><br/>Achievable range: ${data.min_possible?.toFixed(2) || '?'} to ${data.max_possible?.toFixed(2) || '?'}</div>`;
+            document.getElementById('opt5-pagination').innerHTML = '';
+            document.getElementById('opt5-result-count').innerHTML = '';
+            document.getElementById('opt5-note').style.display = 'none';
+            return;
+          }
+          
+          allResults = data.results;
+          currentPage = 0;
+          displayResultsPage();
+          
+          // Show note about grade flexibility if applicable
+          const sameCUCount = {};
+          cus.forEach((cu, idx) => {
+            if (!sameCUCount[cu]) sameCUCount[cu] = [];
+            sameCUCount[cu].push(idx + 1);
+          });
+          
+          const flexibleCUs = Object.entries(sameCUCount).filter(([cu, courses]) => courses.length >= 2);
+          if (flexibleCUs.length > 0) {
+            let note = '<strong>💡 Grade Flexibility:</strong> You can swap grades between courses with the same CU:<br/>';
+            flexibleCUs.forEach(([cu, courseList]) => {
+              note += `Courses ${courseList.join(', ')} (${cu} CU each) - grades can be interchanged<br/>`;
+            });
+            document.getElementById('opt5-note').innerHTML = note;
+            document.getElementById('opt5-note').style.display = 'block';
+          }
+        } catch (e) {
+          alert('Error: ' + e.message);
+        }
+      });
+
+      function displayResultsPage() {
+        const startIdx = currentPage * MAX_RESULTS_PER_PAGE;
+        const endIdx = Math.min(startIdx + MAX_RESULTS_PER_PAGE, allResults.length);
+        const pageResults = allResults.slice(startIdx, endIdx);
+        
+        const totalPages = Math.ceil(allResults.length / MAX_RESULTS_PER_PAGE);
+        
+        // Display count
+        document.getElementById('opt5-result-count').innerHTML = `<strong>Found ${allResults.length} realistic grade combination(s):</strong>`;
+        
+        // Display results
+        let html = '';
+        pageResults.forEach((res, idx) => {
+          const gradesTuple = res[0]; // Array of grade letters
+          const gpa = res[1];
+          
+          // Display as: ['B+', 'C+', 'B', 'A-']
+          const gradesStr = "(" + gradesTuple.map(g => `'${g}'`).join(", ") + ")";
+          
+          html += `<div style="margin-bottom:16px;padding:12px;background:#f9f9f9;border:1px solid #ddd;border-radius:6px">
+            <div style="font-weight:600">Combination ${startIdx + idx + 1}</div>
+            <div style="margin-top:6px;font-family:monospace;color:#333">Grades: ${gradesStr}</div>
+            <div style="margin-top:6px;color:#00A859;font-weight:600;font-size:1.1em">GPA: ${gpa.toFixed(2)}</div>
+          </div>`;
+        });
+        
+        document.getElementById('opt5-result-list').innerHTML = html;
+        document.getElementById('opt5-results').style.display = 'block';
+        
+        // Display pagination
+        let paginationHtml = '';
+        if (totalPages > 1) {
+          paginationHtml = `<div style="margin-top:12px;display:flex;justify-content:center;gap:8px;align-items:center">`;
+          
+          if (currentPage > 0) {
+            paginationHtml += `<button type="button" class="btn" onclick="prevPage()" style="padding:4px 12px;font-size:0.9em">← Previous</button>`;
+          }
+          
+          paginationHtml += `<span style="margin:0 8px">Page ${currentPage + 1} of ${totalPages}</span>`;
+          
+          if (currentPage < totalPages - 1) {
+            paginationHtml += `<button type="button" class="btn" onclick="nextPage()" style="padding:4px 12px;font-size:0.9em">Next →</button>`;
+          }
+          
+          paginationHtml += `</div>`;
+        }
+        
+        document.getElementById('opt5-pagination').innerHTML = paginationHtml;
+      }
+
+      function nextPage() {
+        const totalPages = Math.ceil(allResults.length / MAX_RESULTS_PER_PAGE);
+        if (currentPage < totalPages - 1) {
+          currentPage++;
+          displayResultsPage();
+        }
+      }
+
+      function prevPage() {
+        if (currentPage > 0) {
+          currentPage--;
+          displayResultsPage();
+        }
+      }
+    </script>
+  </div>
+{% endblock %}

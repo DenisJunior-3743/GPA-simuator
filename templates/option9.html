@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Option 9: Vault Functions</h1>
+    <p class="lead">Access advanced vault features for secure storage, retrieval, and management of your academic records.</p>
+    <form>
+      <label>Vault Action</label>
+      <select class="input">
+        <option value="view">View Records</option>
+        <option value="export">Export Data</option>
+        <option value="delete">Delete Vault</option>
+      </select>
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="alert('Will perform vault action (demo)')">Go</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Vault Functions Guidance:</strong>
+      <ul>
+        <li>View, export, or delete your vault records</li>
+        <li>All actions are secure and require confirmation</li>
+        <li>Exported data is in CSV format</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

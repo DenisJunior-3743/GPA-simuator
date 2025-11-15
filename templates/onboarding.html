@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:760px;margin:24px auto;padding:20px">
+    <h1 class="h1">Onboarding — Capture your academic history</h1>
+    <p class="lead">We'll ask for your academic years and semesters. Choose Quick mode for minimal prompts (GPA + total CU per semester) or Detailed mode for course-level input.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+      <div class="option-tile" style="flex:1;min-width:220px">
+        <h3>Quick Mode</h3>
+        <p>Fast entry: one GPA + total CU per semester. Recommended if you want speed.</p>
+        <button class="cta" onclick="alert('Quick mode: will prompt for year/sem, then GPA and CU per sem (not implemented in demo)')">Choose Quick</button>
+      </div>
+      <div class="option-tile" style="flex:1;min-width:220px">
+        <h3>Detailed Mode</h3>
+        <p>Enter individual courses and credit units for precise tracking.</p>
+        <button class="cta" onclick="alert('Detailed mode: per-course prompts (not implemented in demo)')">Choose Detailed</button>
+      </div>
+    </div>
+    <div style="margin-top:16px;color:var(--muted)">
+      <strong>Tip:</strong> You can always load saved semesters later from the Dashboard (Option 3) and add missing semesters.
+    </div>
+  </div>
+{% endblock %}

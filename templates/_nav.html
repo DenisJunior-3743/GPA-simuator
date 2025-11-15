@@ -1,0 +1,21 @@
+<div class="nav-wrap" style="width:100%;display:flex;align-items:center;gap:12px">
+  <div class="nav-left" style="display:flex;gap:8px;align-items:center">
+    <!-- left intentionally left blank to keep brand centered -->
+  </div>
+
+  <div class="nav-center" style="flex:1;text-align:center">
+    <div class="brand">GPA / CGPA <span class="brand-accent">Simulator</span></div>
+    {% if user %}
+      <div class="nav-user" style="margin-top:4px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:320px">{{ user.username }}</div>
+    {% endif %}
+  </div>
+
+  <div class="nav-right" style="display:flex;gap:8px;align-items:center">
+    {% if user %}
+      <a class="btn red" href="/logout">Logout</a>
+    {% else %}
+      <a class="btn nav-register" href="/login">Register</a>
+      <a class="btn nav-login" href="/login">Login</a>
+    {% endif %}
+  </div>
+</div>

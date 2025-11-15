@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Option 10: Exit & Logout</h1>
+    <p class="lead">Log out of your account and exit the simulator. Your data is saved securely in your vault.</p>
+    <form>
+      <div style="margin-top:12px">
+        <button class="cta" type="button" onclick="window.location.href='/logout'">Logout</button>
+        <a class="btn link" href="/">Cancel</a>
+      </div>
+    </form>
+    <div class="info-box" style="margin-top:18px">
+      <strong>Exit Guidance:</strong>
+      <ul>
+        <li>Logging out ensures your data remains secure</li>
+        <li>You can log in again anytime to access your vault</li>
+        <li>Thank you for using the GPA/CGPA Simulator!</li>
+      </ul>
+    </div>
+  </div>
+{% endblock %}

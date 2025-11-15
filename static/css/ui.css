@@ -1,0 +1,75 @@
+:root{
+  --primary:#00A859;
+  --primary-600:#00C853;
+  --white:#fff;
+  --bg:#F7FAFC;
+  --text:#111827;
+  --muted:#6B7280;
+  --radius:10px;
+  --shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+/* Make the top of the page green to avoid any white strip above the header.
+  Use a gentle breakpoint (header area) so the green band covers the top on all pages.
+  The rest of the page uses the normal background color. */
+body{background:linear-gradient(180deg,var(--primary) 0px, var(--primary) 120px, var(--bg) 120px 100%);color:var(--text);font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;margin:0}
+.container{max-width:980px;margin:28px auto;padding:0 16px}
+.site-header{background:var(--white);box-shadow:var(--shadow);}
+.site-header{background:var(--primary);color:var(--white);box-shadow:var(--shadow);}
+.site-header .container{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+.brand{font-weight:700;color:var(--white)}
+.brand-accent{color:var(--white)}
+.nav-wrap .nav-left .btn, .nav-wrap .nav-right .btn{margin-left:0}
+.nav-register, .nav-login{background:#fff;color:var(--primary);border:1px solid rgba(0,0,0,0.06);padding:8px 10px;border-radius:8px;font-weight:600}
+.nav-register:hover, .nav-login:hover{background:var(--primary);color:#fff}
+.nav-user{font-size:14px}
+.btn.red{background:#ef4444;color:#fff;border:none;padding:8px 12px;border-radius:8px;font-weight:700}
+.btn.red:hover{background:#dc2626}
+/* Form row spacing for login/register pages */
+.form-row{margin-bottom:12px}
+
+/* Small style tweak for password toggle inside input */
+.input-with-toggle{position:relative}
+.input-with-toggle button{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;padding:6px;cursor:pointer;font-size:14px}
+.card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.h1{font-size:1.25rem;margin:0 0 8px}
+.lead{color:var(--muted);margin-bottom:12px}
+.option-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.option-tile{padding:18px;border-radius:12px;background:var(--white);border:1px solid rgba(0,0,0,0.06);cursor:pointer;transition:transform .08s ease,box-shadow .12s ease}
+.option-tile:hover{transform:translateY(-4px);box-shadow:0 8px 20px rgba(0,0,0,0.06)}
+.cta{background:var(--primary);color:var(--white);padding:10px 14px;border-radius:10px;border:none;font-weight:600;cursor:pointer;transition:background .15s,box-shadow .15s,transform .08s;box-shadow:0 2px 8px rgba(0,168,89,0.08);text-decoration:none}
+.cta:hover,.cta:focus{background:var(--primary-600);box-shadow:0 4px 16px rgba(0,168,89,0.16);transform:translateY(-2px);outline:none}
+.cta:active{background:var(--primary-600);box-shadow:0 2px 8px rgba(0,168,89,0.18);transform:scale(0.98)}
+.btn{background:#fff;border:1px solid #e5e7eb;padding:8px 12px;border-radius:8px;transition:background .15s,box-shadow .15s,transform .08s;text-decoration:none}
+.btn:hover,.btn:focus{background:var(--primary);color:var(--white);box-shadow:0 2px 8px rgba(0,168,89,0.08);outline:none}
+.btn:active{background:var(--primary-600);color:var(--white);transform:scale(0.98)}
+.btn.link{background:transparent;border:none;color:var(--primary);padding:6px;text-decoration:none}
+.input{width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb}
+/* green field style requested: background green with white text */
+.input.green{background:var(--primary);color:var(--white);border:none}
+.input.green::placeholder{color:rgba(255,255,255,0.8)}
+.alert{background:#FFFAF0;border-left:4px solid #F59E0B;padding:8px;border-radius:6px}
+.muted{color:var(--muted);background:transparent}
+.summary-table{width:100%;border-collapse:collapse;margin-top:8px}
+.summary-table th, .summary-table td{padding:8px;border-bottom:1px solid #f1f5f9}
+.vault-badge{display:inline-block;background:linear-gradient(90deg,var(--primary),var(--primary-600));color:#fff;padding:6px 10px;border-radius:20px;font-weight:600}
+.site-footer{padding:12px 0;color:var(--muted);text-align:center;margin-top:24px}
+.site-footer .developer{margin-top:6px;font-size:0.9rem;color:var(--muted)}
+
+/* AJAX result panel */
+.result-panel{margin-top:16px;transition:all 240ms ease}
+.result-box{padding:12px;border-radius:10px;background:#F8FFF5;border:1px solid rgba(0,168,89,0.08);display:flex;align-items:center;justify-content:space-between}
+.result-box.error{background:#FFF5F5;border-color:rgba(220,38,38,0.08)}
+.result-value{font-size:1.25rem;font-weight:700;color:var(--primary)}
+
+/* Small spinner */
+.spinner{width:28px;height:28px;display:inline-block}
+
+
+@media (max-width:600px){
+  .container{padding:12px}
+  .h1{font-size:1.1rem}
+  .option-grid{grid-template-columns:1fr}
+}

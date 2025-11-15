@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% block content %}
+  <div class="card" style="max-width:720px;margin:24px auto;padding:20px">
+    <h1 class="h1">Save Current Semester to Vault</h1>
+    <p class="lead">Store your current semester's data and it will be combined with your previous records to calculate your running CGPA.</p>
+    <form id="save-sem-form">
+      <div style="margin-bottom:10px">
+        <label>Academic Year</label>
+        <select id="acad-year" class="input" style="width:150px" required>
+          <option value="">Select year...</option>
+          <option value="1">Year 1</option>
+          <option value="2">Year 2</option>
+          <option value="3">Year 3</option>
+          <option value="4">Year 4</option>
+          <option value="5">Year 5</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Semester</label>
+        <select id="semester" class="input" style="width:150px" required>
+          <option value="">Select semester...</option>
+          <option value="1">Semester 1</option>
+          <option value="2">Semester 2</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Semester GPA</label>
+        <input id="sem-gpa" class="input" type="number" min="0" max="5" step="0.01" placeholder="e.g. 3.85" required>
+      </div>
+
+      <div style="margin-bottom:10px">
+        <label>Total Credit Units</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="total-cu" class="input" type="number" min="0" placeholder="0">
+          <button type="button" class="btn" id="btn-calc-cu">Calculate by courses</button>
+        </div>
+      </div>
+
+      <div id="courses-section" style="margin-bottom:10px;display:none">
+        <label>Number of courses</label>
+        <input id="num-courses" class="input" type="number" min="1" max="10" placeholder="e.g. 4">
+      </div>
+
+      <div id="cu-inputs" style="margin-bottom:10px;display:none;border:1px solid #ddd;padding:12px;border-radius:6px">
+        <label style="display:block;margin-bottom:8px">Enter CU for each course</label>
+        <div id="courses-list"></div>
+        <button type="button" class="btn" id="btn-done-cu" style="margin-top:8px">Done - Sum total</button>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button type="button" class="cta" id="btn-save">Save to vault</button>
+        <button type="button" class="btn link" id="btn-clear">Clear</button>
+      </div>
+    </form>
+
+    <script>
+      let coursesCuInputs = [];
+
+      document.getElementById('btn-clear').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('save-sem-form').reset();
+        document.getElementById('courses-section').style.display = 'none';
+        document.getElementById('cu-inputs').style.display = 'none';
+      });
+
+      document.getElementById('btn-calc-cu').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('courses-section').style.display = 'block';
+      });
+
+      document.getElementById('num-courses').addEventListener('change', () => {
+        const n = parseInt(document.getElementById('num-courses').value || '0', 10);
+        if (n < 1 || n > 10) {
+          document.getElementById('cu-inputs').style.display = 'none';
+          return;
+        }
+
+        const list = document.getElementById('courses-list');
+        list.innerHTML = '';
+        coursesCuInputs = [];
+
+        for (let i = 1; i <= n; i++) {
+          const row = document.createElement('div');
+          row.style.display = 'flex';
+          row.style.gap = '8px';
+          row.style.marginBottom = '6px';
+          row.style.alignItems = 'center';
+          
+          const input = document.createElement('select');
+          input.className = 'input';
+          input.style.width = '80px';
+          input.innerHTML = `<option value='1'>1</option><option value='2'>2</option><option value='3' selected>3</option><option value='4'>4</option><option value='5'>5</option>`;
+          coursesCuInputs.push(input);
+
+          row.innerHTML = `<label style='width:80px'>Course ${i}:</label>`;
+          row.appendChild(input);
+          list.appendChild(row);
+        }
+
+        document.getElementById('cu-inputs').style.display = 'block';
+      });
+
+      document.getElementById('btn-done-cu').addEventListener('click', (e) => {
+        e.preventDefault();
+        let total = 0;
+        coursesCuInputs.forEach(inp => {
+          total += parseInt(inp.value || '3', 10);
+        });
+        document.getElementById('total-cu').value = total;
+        document.getElementById('courses-section').style.display = 'none';
+        document.getElementById('cu-inputs').style.display = 'none';
+      });
+
+      document.getElementById('btn-save').addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        const year = parseInt(document.getElementById('acad-year').value || '0', 10);
+        const sem = parseInt(document.getElementById('semester').value || '0', 10);
+        const gpa = parseFloat(document.getElementById('sem-gpa').value || '0');
+        const cu = parseInt(document.getElementById('total-cu').value || '0', 10);
+
+        if (year < 1 || sem < 1) { alert('Select academic year and semester'); return; }
+        if (isNaN(gpa) || gpa < 0 || gpa > 5) { alert('Enter valid semester GPA (0.0 - 5.0)'); return; }
+        if (isNaN(cu) || cu < 1) { alert('Enter valid total CU (>= 1)'); return; }
+
+        try {
+          const res = await fetch('/api/save-semester', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              academic_year: year,
+              semester_num: sem,
+              gpa: gpa,
+              total_cu: cu
+            })
+          });
+
+          if (!res.ok) {
+            const err = await res.json();
+            alert(err.error || 'Failed to save semester');
+            return;
+          }
+
+          const data = await res.json();
+          alert(`Semester saved! Your new CGPA: ${data.new_cgpa?.toFixed(2) || '?'}`);
+          document.getElementById('save-sem-form').reset();
+          document.getElementById('courses-section').style.display = 'none';
+          document.getElementById('cu-inputs').style.display = 'none';
+          // Optionally redirect after delay
+          setTimeout(() => { window.location.href = '/history'; }, 1000);
+        } catch (e) {
+          alert('Error: ' + e.message);
+        }
+      });
+    </script>
+  </div>
+{% endblock %}
