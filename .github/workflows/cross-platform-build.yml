@@ -57,8 +57,13 @@ jobs:
           set -e
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.tag.outputs.next }}
-          git push origin ${{ steps.tag.outputs.next }}
+          if ! git rev-parse ${{ steps.tag.outputs.next }} >/dev/null 2>&1; then
+            git tag ${{ steps.tag.outputs.next }}
+            git push origin ${{ steps.tag.outputs.next }}
+            echo "Tag ${{ steps.tag.outputs.next }} created and pushed"
+          else
+            echo "Tag ${{ steps.tag.outputs.next }} already exists, skipping"
+          fi
 
   build-windows:
     name: Build Windows Executable
