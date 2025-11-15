@@ -14,7 +14,9 @@ jobs:
     name: Bump Version & Create Tag
     runs-on: ubuntu-latest
     if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-
+    outputs:
+      tag_name: ${{ steps.tag.outputs.next }}
+    
     steps:
       - name: Checkout repo (full)
         uses: actions/checkout@v4
@@ -67,8 +69,9 @@ jobs:
 
   build-windows:
     name: Build Windows Executable
+    needs: [bump-tag]
     runs-on: windows-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -109,8 +112,9 @@ jobs:
 
   build-linux:
     name: Build Linux AppImage
+    needs: [bump-tag]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -165,8 +169,9 @@ jobs:
 
   build-macos:
     name: Build macOS App
+    needs: [bump-tag]
     runs-on: macos-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -199,8 +204,9 @@ jobs:
 
   build-android:
     name: Build Android APK (optional)
+    needs: [bump-tag]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
       - uses: actions/checkout@v4
@@ -235,9 +241,9 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build-windows, build-linux, build-macos]
+    needs: [bump-tag, build-windows, build-linux, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: ${{ startsWith(needs.bump-tag.outputs.tag_name, 'v') }}
 
     steps:
       - uses: actions/checkout@v4
