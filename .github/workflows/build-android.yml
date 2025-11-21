@@ -30,6 +30,13 @@ jobs:
           sudo apt-get install -y build-essential git python3-dev ffmpeg libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev zlib1g-dev || true
           python3 -m pip install --upgrade pip
           pip install buildozer cython kivy
+      - name: Setup Android SDK (ensure sdkmanager present)
+        uses: r0adkll/setup-android-sdk@v2
+        with:
+          api-level: 33
+          build-tools: 36.1.0
+          components: platform-tools,build-tools;36.1.0
+          ndk: 25.2.9519653
       - name: Accept Android SDK licenses
         run: |
           # Prefer using the runner-installed SDK, but also prepare the Buildozer-downloaded SDK path.
