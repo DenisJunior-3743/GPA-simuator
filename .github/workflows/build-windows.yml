@@ -33,31 +33,28 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller
       - name: Build with PyInstaller
-        shell: bash
+        shell: pwsh
         run: |
-          if [ -f "gpa_simulator.spec" ]; then
+          if (Test-Path "gpa_simulator.spec") {
             pyinstaller gpa_simulator.spec
-          else
+          } else {
             pyinstaller --distpath "./dist" --windowed ui_app.py
-          fi
-          mkdir -p out
-          ARCH=${{ matrix.arch }}
-          if [ "$ARCH" = "x86" ]; then
-            folder="gpa-simulator-windows-x86"
-          else
-            folder="gpa-simulator-windows-x64"
-          fi
-          rm -rf "$folder"
-          mkdir -p "$folder"
-          if [ -d "dist/gpa_simulator" ]; then
-            cp -r dist/gpa_simulator/* "$folder/"
-          else
-            cp -r dist/* "$folder/" || true
-          fi
+          }
+          $arch = '${{ matrix.arch }}'
+          if ($arch -eq 'x86') { $folder = 'gpa-simulator-windows-x86' } else { $folder = 'gpa-simulator-windows-x64' }
+          Remove-Item -Recurse -Force $folder -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $folder -Force | Out-Null
+          if (Test-Path 'dist/gpa_simulator') {
+            Copy-Item -Path 'dist/gpa_simulator/*' -Destination $folder -Recurse -Force
+          } else {
+            Copy-Item -Path 'dist/*' -Destination $folder -Recurse -Force -ErrorAction SilentlyContinue
+          }
           # include icon and launcher if present
-          if [ -f "gpa.ico" ]; then cp gpa.ico "$folder/" || true; fi
-          if [ -f "run_simulator.bat" ]; then cp run_simulator.bat "$folder/" || true; fi
-          zip -r "${folder}.zip" "$folder"
+          if (Test-Path 'gpa.ico') { Copy-Item 'gpa.ico' -Destination $folder -Force }
+          if (Test-Path 'run_simulator.bat') { Copy-Item 'run_simulator.bat' -Destination $folder -Force }
+          if (Test-Path $folder) {
+            Compress-Archive -Path "$folder\\*" -DestinationPath "$folder.zip" -Force
+          }
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
