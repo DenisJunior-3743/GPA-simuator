@@ -34,9 +34,15 @@ jobs:
         run: |
           export ANDROID_SDK_ROOT=$ANDROID_HOME
           mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo "y" | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+          # Accept all Android SDK licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+          # Pre-create license acceptance files to bypass prompts
+          echo -e "\n8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo -e "\nd56f5187479451eabf01fb78af6dfcb131b33910" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/google-tv-preview-license
       - name: Build APK
         run: |
+          export ANDROID_SDK_ROOT=$ANDROID_HOME
           buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4

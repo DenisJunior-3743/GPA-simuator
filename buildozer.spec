@@ -81,6 +81,12 @@ android.use_legacy_toolchain = False
 # (bool) Enable on screen keyboard on startup
 android.keyboard_layout = qwerty
 
+# Accept Android SDK licenses automatically
+android.accept_sdk_license = True
+
+# Gradle options to accept licenses
+android.gradle_dependencies =
+
 ################################################################################
 # iOS specific
 ################################################################################
