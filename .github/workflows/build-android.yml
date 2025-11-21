@@ -61,7 +61,39 @@ jobs:
             echo "Found sdkmanager at: $SDKMANAGER_PATH"
             yes | $SDKMANAGER_PATH --licenses || true
           else
-            echo "Warning: sdkmanager not found yet. Pre-created license files in both SDK locations. Proceeding to buildozer which will use the Buildozer SDK path."
+            echo "sdkmanager not found in known locations. Installing Android commandline-tools into Buildozer SDK path."
+            mkdir -p "$BUILDOZER_SDK/cmdline-tools"
+            TMP_ZIP="$RUNNER_TEMP/cmdline-tools.zip"
+            echo "Downloading commandline-tools..."
+            curl -fsSL -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" || curl -fsSL -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-6514223_latest.zip"
+            mkdir -p "$BUILDOZER_SDK/cmdline-tools/latest"
+            unzip -q "$TMP_ZIP" -d "$BUILDOZER_SDK/cmdline-tools/latest"
+            # The zip may extract to 'cmdline-tools' root; move contents if necessary
+            if [ -d "$BUILDOZER_SDK/cmdline-tools/latest/cmdline-tools" ]; then
+              mv "$BUILDOZER_SDK/cmdline-tools/latest/cmdline-tools"/* "$BUILDOZER_SDK/cmdline-tools/latest/"
+            fi
+            SDKMANAGER_PATH="$BUILDOZER_SDK/cmdline-tools/latest/bin/sdkmanager"
+            if [ -x "$SDKMANAGER_PATH" ]; then
+              echo "Installing platform-tools and build-tools via sdkmanager at: $SDKMANAGER_PATH"
+              yes | "$SDKMANAGER_PATH" --sdk_root="$BUILDOZER_SDK" --install "platform-tools" "build-tools;36.1.0" || true
+              yes | "$SDKMANAGER_PATH" --sdk_root="$BUILDOZER_SDK" --licenses || true
+            else
+              echo "Failed to install commandline-tools or sdkmanager still missing; proceeding with pre-created license files."
+            fi
+          
+          # Ensure Buildozer uses the Buildozer SDK and add diagnostics to help CI troubleshooting
+          export ANDROID_SDK_ROOT="$BUILDOZER_SDK"
+          echo "ANDROID_SDK_ROOT set to: $ANDROID_SDK_ROOT"
+          echo "Listing SDK root contents (top-level):"
+          ls -la "$ANDROID_SDK_ROOT" || true
+          echo "Listing Buildozer android platform dir (if present):"
+          ls -la "$HOME/.buildozer/android/platform" || true
+          echo "Which sdkmanager (system):"; which sdkmanager || true
+          echo "Which sdkmanager (buildozer path):"; if [ -x "$SDKMANAGER_PATH" ]; then echo "$SDKMANAGER_PATH"; else echo "(not found)"; fi
+          echo "sdkmanager version (if available):"; if [ -x "$SDKMANAGER_PATH" ]; then "$SDKMANAGER_PATH" --version || true; fi
+          echo "Java version:"; java -version || true
+          echo "Javac version:"; javac -version || true
+          echo "Find sdkmanager under buildozer sdk path:"; find "$ANDROID_SDK_ROOT" -type f -name sdkmanager -print || true
           fi
       - name: Build APK
         run: |
