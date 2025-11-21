@@ -34,12 +34,26 @@ jobs:
         run: |
           export ANDROID_SDK_ROOT=$ANDROID_HOME
           mkdir -p $ANDROID_SDK_ROOT/licenses
-          # Accept all Android SDK licenses
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
-          # Pre-create license acceptance files to bypass prompts
-          echo -e "\n8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo -e "\nd56f5187479451eabf01fb78af6dfcb131b33910" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/google-tv-preview-license
+          
+          # Write license acceptance files (checksums only, no newlines at start)
+          echo "8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131b33910" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/google-tv-preview-license
+          
+          # Find and use sdkmanager to accept licenses
+          SDKMANAGER_PATH=""
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -x "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/tools/bin/sdkmanager"
+          fi
+          
+          if [ -n "$SDKMANAGER_PATH" ]; then
+            echo "Found sdkmanager at: $SDKMANAGER_PATH"
+            yes | $SDKMANAGER_PATH --licenses || true
+          else
+            echo "Warning: sdkmanager not found, using pre-created license files"
+          fi
       - name: Build APK
         run: |
           export ANDROID_SDK_ROOT=$ANDROID_HOME
