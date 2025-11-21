@@ -2,29 +2,47 @@
 """
 PyInstaller spec file for GPA/CGPA Simulator Flask app.
 Bundles ui_app.py with all templates, static files, and dependencies.
+Cross-platform compatible (Windows, Linux, macOS).
 """
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 import sys
 import os
 
 block_cipher = None
 
+# Collect all Flask and related modules
+flask_datas = collect_data_files('flask')
+flask_binaries = []
+
 a = Analysis(
     ['ui_app.py'],
     pathex=[],
-    binaries=[],
+    binaries=flask_binaries,
     datas=[
         ('templates', 'templates'),
         ('static', 'static'),
         ('app', 'app'),
-    ],
+    ] + flask_datas,
     hiddenimports=[
         'flask',
+        'flask.cli',
+        'flask.json',
+        'flask.ctx',
+        'flask.app',
+        'flask.scaffold',
         'werkzeug',
-        'sqlite3',
+        'werkzeug.serving',
+        'werkzeug.security',
+        'werkzeug.exceptions',
         'jinja2',
-    ],
+        'jinja2.ext',
+        'sqlite3',
+        'json',
+        'markupsafe',
+        'click',
+        'itsdangerous',
+    ] + collect_submodules('flask') + collect_submodules('werkzeug'),
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -51,9 +69,11 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=True,
+    console=False,
+    icon='gpa.ico',
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    onefile=True,
 )

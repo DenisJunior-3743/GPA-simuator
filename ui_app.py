@@ -1,5 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import os
+import threading
+import time
 from app import vault_manager
 from app.gpa_calculator import compute_gpa
 from app.simulator import generate_grade_combinations
@@ -171,6 +173,18 @@ def exit_app():
     """Exit route: clear session and present a goodbye page."""
     session.clear()
     return render_template('exit.html')
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """Shutdown route: gracefully close the Flask app."""
+    def do_shutdown():
+        time.sleep(0.5)  # Give response time to be sent
+        os._exit(0)  # Force exit the entire process
+    
+    thread = threading.Thread(target=do_shutdown)
+    thread.daemon = True
+    thread.start()
+    return jsonify({'status': 'shutting down'})
 
 @app.route('/option2')
 def option2():
@@ -394,5 +408,20 @@ def simulate_grades():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    # Run on localhost for offline usage
-    app.run(host='127.0.0.1', port=5000, debug=True)
+    # Open default browser shortly after the server starts (for packaged exe)
+    import threading
+    import time
+    import webbrowser
+
+    def _open_browser():
+        # delay briefly to let the server bind
+        time.sleep(1)
+        try:
+            webbrowser.open('http://127.0.0.1:5000')
+        except Exception:
+            pass
+
+    threading.Thread(target=_open_browser, daemon=True).start()
+
+    # Run on localhost for offline usage. Disable the reloader for single-file builds.
+    app.run(host='127.0.0.1', port=5000, debug=False, use_reloader=False)

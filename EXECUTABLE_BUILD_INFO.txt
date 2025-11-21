@@ -1,0 +1,53 @@
+GPA and CGPA Simulator - Windows Executable Distribution
+=========================================================
+
+✓ BUILD COMPLETE!
+
+EXECUTABLE DETAILS:
+- Single-file executable: gpa_simulator.exe (13.08 MB)
+- Includes all dependencies: Flask, Werkzeug, Jinja2, SQLite3, etc.
+- No Python installation required
+- No source code visible
+- Windowed GUI mode (no console)
+
+DISTRIBUTION PACKAGE:
+- File: gpa-simulator-windows.zip (12.84 MB)
+- Ready to distribute to end users
+- Works on any Windows 10/11 machine (x64)
+
+CONTENTS OF PACKAGE:
+1. gpa_simulator.exe      - Main executable (double-click to run)
+2. run_gpa_cli.bat        - Optional launcher script
+3. gpa.ico               - Application icon
+
+HOW TO USE:
+1. Extract gpa-simulator-windows.zip
+2. Double-click gpa_simulator.exe OR run run_gpa_cli.bat
+3. Browser will open to http://localhost:5000 automatically
+4. App runs offline - all data stored locally in SQLite database
+
+TECHNICAL DETAILS:
+- Built with PyInstaller 6.16.0
+- Python 3.12.10 runtime bundled
+- Single executable file mode (--onefile)
+- Icon embedded in executable
+- No console window (windowed mode)
+
+DEPLOYMENT:
+- No installation needed
+- No system dependencies required
+- No Python installation required on target machine
+- Users only see: gpa_simulator.exe + launcher + icon
+
+BUILD CONFIGURATION (gpa_simulator.spec):
+- Collects all Flask data files automatically
+- Includes Flask, Werkzeug, and all submodules
+- Hidden imports for all dependencies
+- UPX enabled for smaller exe size (could be disabled for faster startup)
+
+TROUBLESHOOTING:
+If exe doesn't start:
+1. Ensure .exe is not blocked by Windows (right-click > Properties > Unblock)
+2. Try running as administrator
+3. Check Windows Defender isn't blocking it
+4. Ensure sufficient disk space for temp files
