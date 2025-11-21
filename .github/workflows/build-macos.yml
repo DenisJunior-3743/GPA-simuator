@@ -10,54 +10,9 @@ permissions:
   packages: write
 
 jobs:
-  bump-tag:
-    name: Bump and create tag
-    runs-on: ubuntu-latest
-    outputs:
-      tag: ${{ steps.set-tag.outputs.new_tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Compute next tag
-        id: set-tag
-        run: |
-          git fetch --tags origin || true
-          latest=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -z "$latest" ]; then
-            new_tag="v1.0"
-          else
-            t=${latest#v}
-            IFS='.' read -r -a parts <<< "$t"
-            if [ ${#parts[@]} -eq 1 ]; then
-              major=${parts[0]}
-              new_tag="v${major}.1"
-            elif [ ${#parts[@]} -eq 2 ]; then
-              major=${parts[0]}
-              minor=${parts[1]}
-              minor=$((minor + 1))
-              new_tag="v${major}.${minor}"
-            else
-              major=${parts[0]}
-              minor=${parts[1]}
-              patch=${parts[2]}
-              patch=$((patch + 1))
-              new_tag="v${major}.${minor}.${patch}"
-            fi
-          fi
-          # Append macOS OS suffix to avoid conflicts with other OS builds
-          new_tag="${new_tag}-macos"
-          echo "New tag: $new_tag"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$new_tag"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git "$new_tag"
-          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
   build:
     name: Build macOS
     runs-on: macos-latest
-    needs: bump-tag
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -104,27 +59,24 @@ jobs:
           path: gpa-simulator.dmg
           if-no-files-found: ignore
   create-release:
-    name: Create Release and attach artifacts
-    needs: [bump-tag, build]
+    name: Create Release with macOS builds
+    needs: build
     runs-on: ubuntu-latest
+    if: success()
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        with:
-          tag_name: ${{ needs.bump-tag.outputs.tag }}
-          release_name: ${{ needs.bump-tag.outputs.tag }} - macOS build
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload release assets
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            release-artifacts/*
+          tag_name: release-${{ github.run_id }}-macos
+          name: macOS Build (Run ${{ github.run_number }})
+          files: release-artifacts/**/*
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
