@@ -31,12 +31,31 @@ jobs:
           python3 -m pip install --upgrade pip
           pip install buildozer cython kivy
       - name: Setup Android SDK (ensure sdkmanager present)
-        uses: r0adkll/setup-android-sdk@v2
-        with:
-          api-level: 33
-          build-tools: 36.1.0
-          components: platform-tools,build-tools;36.1.0
-          ndk: 25.2.9519653
+        run: |
+          set -e
+          BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
+          sudo apt-get update
+          sudo apt-get install -y unzip curl || true
+          mkdir -p "$BUILDOZER_SDK/cmdline-tools"
+          TMP_ZIP="$RUNNER_TEMP/cmdline-tools.zip"
+          echo "Downloading commandline-tools..."
+          curl -fsSL -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip" || curl -fsSL -o "$TMP_ZIP" "https://dl.google.com/android/repository/commandlinetools-linux-6514223_latest.zip"
+          mkdir -p "$BUILDOZER_SDK/cmdline-tools/latest"
+          unzip -q "$TMP_ZIP" -d "$BUILDOZER_SDK/cmdline-tools/latest"
+          # The zip may extract to 'cmdline-tools' root; move contents if necessary
+          if [ -d "$BUILDOZER_SDK/cmdline-tools/latest/cmdline-tools" ]; then
+            mv "$BUILDOZER_SDK/cmdline-tools/latest/cmdline-tools"/* "$BUILDOZER_SDK/cmdline-tools/latest/"
+          fi
+          export ANDROID_SDK_ROOT="$BUILDOZER_SDK"
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          echo "SDK root: $ANDROID_SDK_ROOT"
+          if command -v sdkmanager >/dev/null 2>&1; then
+            echo "sdkmanager available"
+            yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --install "platform-tools" "build-tools;36.1.0" || true
+            yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses || true
+          else
+            echo "sdkmanager not found after installing commandline-tools"
+          fi
       - name: Accept Android SDK licenses
         run: |
           # Prefer using the runner-installed SDK, but also prepare the Buildozer-downloaded SDK path.
