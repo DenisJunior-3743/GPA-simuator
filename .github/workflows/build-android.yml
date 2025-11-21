@@ -32,31 +32,43 @@ jobs:
           pip install buildozer cython kivy
       - name: Accept Android SDK licenses
         run: |
+          # Prefer using the runner-installed SDK, but also prepare the Buildozer-downloaded SDK path.
           export ANDROID_SDK_ROOT=$ANDROID_HOME
+          BUILDOZER_SDK="$HOME/.buildozer/android/platform/android-sdk"
           mkdir -p $ANDROID_SDK_ROOT/licenses
-          
-          # Write license acceptance files (checksums only, no newlines at start)
-          echo "8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131b33910" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/google-tv-preview-license
-          
-          # Find and use sdkmanager to accept licenses
+          mkdir -p $BUILDOZER_SDK/licenses
+
+          # Write license acceptance files (checksums only) into both SDK locations
+          for L in "$ANDROID_SDK_ROOT/licenses" "$BUILDOZER_SDK/licenses"; do
+            echo "8933bad161af4b6a5b573652ffc7aaf3aee85a47" > $L/android-sdk-license
+            echo "d56f5187479451eabf01fb78af6dfcb131b33910" > $L/android-sdk-preview-license
+            echo "84831b9409646a918e30573bab4c9c91346d8abd" > $L/google-tv-preview-license
+          done
+
+          # Try to find sdkmanager in multiple possible locations (Buildozer SDK first)
           SDKMANAGER_PATH=""
-          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+          if [ -x "$BUILDOZER_SDK/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$BUILDOZER_SDK/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -x "$BUILDOZER_SDK/tools/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$BUILDOZER_SDK/tools/bin/sdkmanager"
+          elif [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
             SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           elif [ -x "$ANDROID_HOME/tools/bin/sdkmanager" ]; then
             SDKMANAGER_PATH="$ANDROID_HOME/tools/bin/sdkmanager"
           fi
-          
+
           if [ -n "$SDKMANAGER_PATH" ]; then
             echo "Found sdkmanager at: $SDKMANAGER_PATH"
             yes | $SDKMANAGER_PATH --licenses || true
           else
-            echo "Warning: sdkmanager not found, using pre-created license files"
+            echo "Warning: sdkmanager not found yet. Pre-created license files in both SDK locations. Proceeding to buildozer which will use the Buildozer SDK path."
           fi
       - name: Build APK
         run: |
-          export ANDROID_SDK_ROOT=$ANDROID_HOME
+          # Ensure Buildozer uses the SDK we prepared (Buildozer downloads SDK under $HOME/.buildozer/...)
+          export ANDROID_SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          echo "ANDROID_SDK_ROOT is set to: $ANDROID_SDK_ROOT"
           buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4
