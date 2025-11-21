@@ -28,8 +28,10 @@ jobs:
       - name: Build with PyInstaller
         run: |
           if [ -f "gpa_simulator.spec" ]; then
-            pyinstaller gpa_simulator.spec --onedir
+            # When a .spec file is present, run PyInstaller with the spec only (options like --onedir are invalid)
+            pyinstaller gpa_simulator.spec
           else
+            # No spec: build from script and request an --onedir output
             pyinstaller --distpath "./dist-linux" --onedir ui_app.py
           fi
       - name: Create AppImage (best effort)
